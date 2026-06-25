@@ -37,11 +37,16 @@ export async function generateChatResponse(history: Message[], systemInstruction
     parts: [{ text: msg.content }],
   }));
 
-  // El último mensaje se envía para generar la respuesta
-  const lastMessage = formattedHistory[formattedHistory.length - 1];
-  const previousHistory = formattedHistory.slice(0, -1);
+  // Sanitizar el historial para que el primer mensaje comience sí o sí con el rol 'user'.
+  // Google Generative AI lanza un error crítico si el historial comienza con un mensaje de rol 'model'.
+  const firstUserIdx = formattedHistory.findIndex((msg) => msg.role === 'user');
+  const sanitizedHistory = firstUserIdx !== -1 ? formattedHistory.slice(firstUserIdx) : formattedHistory;
 
-  // Iniciar la sesión de chat con el historial anterior
+  // El último mensaje se envía para generar la respuesta
+  const lastMessage = sanitizedHistory[sanitizedHistory.length - 1];
+  const previousHistory = sanitizedHistory.slice(0, -1);
+
+  // Iniciar la sesión de chat con el historial anterior sanitizado
   const chat = model.startChat({
     history: previousHistory,
   });

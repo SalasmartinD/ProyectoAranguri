@@ -9,8 +9,8 @@ export async function POST(request: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === 'your_gemini_api_key') {
       return NextResponse.json(
-        { 
-          error: 'Configuración incompleta. Por favor, configura tu GEMINI_API_KEY en el archivo .env.local para activar el asistente de IA.' 
+        {
+          error: 'Configuración incompleta. Por favor, configura tu GEMINI_API_KEY en el archivo .env.local para activar el asistente de IA.'
         },
         { status: 500 }
       );
@@ -60,9 +60,12 @@ export async function POST(request: Request) {
 
     // 5. Configurar el System Prompt estricto
     const systemInstruction = `Sos el asesor virtual de la concesionaria. Tu stock real disponible es el siguiente:
-${JSON.stringify(stockContext, null, 2)}
-
-Respondé las dudas de forma amable basándote solo en estos datos. Si el usuario pide un vehículo, marca, modelo o tipo que no está en la lista anterior, debes ser transparente indicando que no está disponible actualmente, y sugerirle la alternativa disponible más cercana en precio o segmento dentro de nuestro stock actual. No inventes vehículos que no estén en el JSON.`;
+    ${JSON.stringify(stockContext, null, 2)}
+    Respondé las dudas de forma amable basándote solo
+    en estos datos. Si el usuario pide un vehículo, marca, modelo o tipo que 
+    no está en la lista anterior, debes ser transparente indicando que no está disponible actualmente, y
+    sugerirle la alternativa disponible más cercana en precio o segmento dentro de nuestro stock actual.
+    No inventes vehículos que no estén en el JSON.`;
 
     // 6. Generar respuesta con Gemini
     const textResponse = await generateChatResponse(messages, systemInstruction);
@@ -70,7 +73,7 @@ Respondé las dudas de forma amable basándote solo en estos datos. Si el usuari
     return NextResponse.json({ response: textResponse });
   } catch (error: any) {
     console.error('Error en API Route /api/chat:', error);
-    
+
     if (error?.message === 'GEMINI_API_KEY_MISSING') {
       return NextResponse.json(
         { error: 'Configuración incompleta. Por favor, configura tu GEMINI_API_KEY en el archivo .env.local para activar el asistente de IA.' },
@@ -79,7 +82,7 @@ Respondé las dudas de forma amable basándote solo en estos datos. Si el usuari
     }
 
     return NextResponse.json(
-      { error: 'Ocurrió un error inesperado al procesar tu consulta con el asistente.' },
+      { error: error?.message || 'Ocurrió un error inesperado al procesar tu consulta con el asistente.' },
       { status: 500 }
     );
   }
