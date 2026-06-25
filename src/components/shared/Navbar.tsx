@@ -26,7 +26,7 @@ export default function Navbar() {
             <Car className="h-5 w-5" />
           </div>
           <span className="font-bold text-lg tracking-tight text-slate-800">
-            Aranguri<span className="text-indigo-600">Motos</span>
+            Automotores<span className="text-indigo-600">Salas</span>
           </span>
         </Link>
 
