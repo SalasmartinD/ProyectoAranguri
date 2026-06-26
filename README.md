@@ -120,7 +120,7 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 
 Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de cambios críticos, implementamos una infraestructura moderna de pruebas unitarias e integración continua junto con un flujo de despliegue optimizado.
 
-### 🧪 Pruebas Unitarias con Vitest
+### Pruebas Unitarias con Vitest
 Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
 
 Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
@@ -142,7 +142,7 @@ Para ejecutar los tests localmente:
 npm run test
 ```
 
-### Pipeline de Integración Continua (CI)
+### Pipeline de Integración Continua (CI) 
 Configuramos un pipeline automático mediante **GitHub Actions** (`.github/workflows/ci.yml`) que se dispara en cada `push` o `pull_request` a las ramas principales (`main`, `master`).
 
 El workflow de CI realiza los siguientes pasos en un runner limpio de `ubuntu-latest`:
