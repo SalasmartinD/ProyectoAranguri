@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/core/services/supabase';
 import { createClient } from '@supabase/supabase-js';
+import { calcularSueldo } from '@/core/utils/finance';
 
 function getPeriodValue(dateStr: string): number {
   if (dateStr.includes('T')) {
@@ -176,13 +177,11 @@ export async function POST(request: Request) {
     if (customMontoFinal !== null) {
       totalLiquidado = customMontoFinal;
     } else {
-      if (empleado.tipo_remuneracion === 'FIJO') {
-        totalLiquidado = sueldoFijo;
-      } else if (empleado.tipo_remuneracion === 'COMISION') {
-        totalLiquidado = comision;
-      } else if (empleado.tipo_remuneracion === 'MIXTO') {
-        totalLiquidado = sueldoFijo + comision;
-      }
+      totalLiquidado = calcularSueldo({
+        tipo_remuneracion: empleado.tipo_remuneracion,
+        sueldo_fijo: empleado.sueldo_fijo,
+        porcentaje_comision: empleado.porcentaje_comision
+      }, totalVentas);
     }
 
     if (totalLiquidado <= 0) {

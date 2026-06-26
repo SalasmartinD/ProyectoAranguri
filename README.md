@@ -2,7 +2,7 @@
 
 ---
 
-## 🚀 1. Resumen Ejecutivo y Enfoque de Negocio
+## 1. Resumen Ejecutivo y Enfoque de Negocio
 
 **AutoGestion ERP** es una plataforma integral diseñada específicamente para digitalizar y automatizar el ciclo operativo completo de concesionarias automotrices. 
 
@@ -18,7 +18,7 @@ Por esta razón, diseñé una arquitectura que **cruza dinámicamente el control
 
 ---
 
-## 🤖 2. Bitácora de Copiloto: Orquestación y Co-creación con IA
+## 2. Bitácora de Copiloto: Orquestación y Co-creación con IA
 
 Desarrollar una plataforma con este nivel de robustez en tiempos acotados requirió adoptar un rol de dirección técnica y orquestar el desarrollo de forma inteligente utilizando a **Antigravity (Claude)** como copiloto de desarrollo avanzado.
 
@@ -42,7 +42,7 @@ Trabajar con IA requiere un criterio de QA riguroso para auditar y depurar error
 
 ---
 
-## 🛠️ 3. Stack Tecnológico y Justificación Técnica
+## 3. Stack Tecnológico y Justificación Técnica
 
 | Tecnología | Rol en el Proyecto | Justificación Arquitectónica |
 | :--- | :--- | :--- |
@@ -56,7 +56,7 @@ Trabajar con IA requiere un criterio de QA riguroso para auditar y depurar error
 
 ---
 
-## 🏗️ 4. Arquitectura de Datos y Parametrización
+## 4. Arquitectura de Datos y Parametrización
 
 ### Evolución de ENUMs a Datos Dinámicos
 Inicialmente, para acelerar la maquetación inicial, concebí el sistema utilizando tipos ENUM estáticos de base de datos para clasificar tanto los **roles de los empleados** como las **categorías de los movimientos de caja**. 
@@ -87,7 +87,7 @@ Para solucionar esto, implementé un esquema de **Baja Lógica**:
 
 ---
 
-## ✨ 5. Orquestación de IA: Estrategia de Prompt Engineering
+## 5. Orquestación de IA: Estrategia de Prompt Engineering
 
 ### Endpoint Centralizado `/api/generate-description`
 El asistente de inteligencia artificial para la generación de descripciones comerciales opera a través de un endpoint único que encapsula el comportamiento del LLM y garantiza consistencia:
@@ -116,7 +116,7 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 
 ---
 
-## 📋 6. Guía de Instalación y Requisitos
+## 6. Guía de Instalación y Requisitos
 
 ### Requisitos Previos
 *   **Node.js**: Versión 18.0 o superior instalada.
@@ -142,7 +142,7 @@ GEMINI_API_KEY=tu-api-key-de-gemini
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/usuario/concesionaria.git
+    git clone https://github.com/SalasmartinD/ProyectoAranguri.git
     cd concesionaria
     ```
 
