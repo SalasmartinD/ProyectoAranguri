@@ -269,7 +269,7 @@ export default function OperacionesPage() {
                     <option value="">-- Seleccionar Empleado --</option>
                     {empleados.map((emp) => (
                       <option key={emp.id} value={emp.id}>
-                        {emp.nombre} ({emp.rol})
+                        {emp.nombre} ({emp.roles?.nombre || 'Sin Rol'})
                       </option>
                     ))}
                   </select>
@@ -315,7 +315,7 @@ export default function OperacionesPage() {
                     <option value="">-- Seleccionar Empleado --</option>
                     {empleados.map((emp) => (
                       <option key={emp.id} value={emp.id}>
-                        {emp.nombre} ({emp.rol})
+                        {emp.nombre} ({emp.roles?.nombre || 'Sin Rol'})
                       </option>
                     ))}
                   </select>

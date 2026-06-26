@@ -15,7 +15,8 @@ import {
   Menu, 
   X,
   User,
-  CreditCard
+  CreditCard,
+  Settings
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -72,6 +73,7 @@ export default function DashboardLayout({
     { href: '/dashboard/operaciones', label: 'Operaciones', icon: DollarSign },
     { href: '/dashboard/empleados', label: 'Equipo / KPIs', icon: Users },
     { href: '/dashboard/finanzas', label: 'Finanzas y Caja', icon: CreditCard },
+    { href: '/dashboard/configuracion', label: 'Ajustes', icon: Settings },
   ];
 
   if (checkingAuth) {

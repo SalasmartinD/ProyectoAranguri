@@ -25,8 +25,18 @@ interface MovimientoCaja {
   fecha: string;
   monto: number;
   tipo_movimiento: 'INGRESO' | 'EGRESO';
-  categoria: 'VENTA_VEHICULO' | 'SUELDOS_Y_COMISIONES' | 'GASTO_OPERATIVO' | 'OTROS';
+  categoria_id: string;
+  categorias_caja?: {
+    nombre: string;
+  };
   descripcion: string;
+}
+
+interface CategoriaCaja {
+  id: string;
+  nombre: string;
+  tipo_permitido: 'INGRESO' | 'EGRESO' | 'AMBOS';
+  creado_en: string;
 }
 
 interface TransaccionPeriodo {
@@ -36,12 +46,39 @@ interface TransaccionPeriodo {
   tipo: 'Compra' | 'Venta';
 }
 
+function getPeriodValue(dateStr: string): number {
+  if (dateStr.includes('T')) {
+    const d = new Date(dateStr);
+    return d.getUTCFullYear() * 12 + d.getUTCMonth();
+  }
+  const parts = dateStr.split('-');
+  if (parts.length >= 2) {
+    return parseInt(parts[0], 10) * 12 + (parseInt(parts[1], 10) - 1);
+  }
+  const d = new Date(dateStr);
+  return d.getUTCFullYear() * 12 + d.getUTCMonth();
+}
+
 export default function FinanzasPage() {
   const { empleados, loading: loadingEmpleados, error: errorEmpleados, fetchEmpleados } = useEmpleados();
 
   // Estados de fecha
   const [mes, setMes] = useState<number>(new Date().getMonth() + 1);
   const [anio, setAnio] = useState<number>(new Date().getFullYear());
+
+  // Filtrar empleados contratados en el período seleccionado
+  const empleadosFiltrados = useMemo(() => {
+    const selectedPeriod = anio * 12 + (mes - 1);
+    return empleados.filter((emp) => {
+      const altaStr = emp.fecha_alta || emp.creado_en || emp.fecha_ingreso;
+      const altaPeriod = getPeriodValue(altaStr);
+      
+      const bajaStr = emp.fecha_baja;
+      const bajaPeriod = bajaStr ? getPeriodValue(bajaStr) : null;
+      
+      return selectedPeriod >= altaPeriod && (bajaPeriod === null || selectedPeriod <= bajaPeriod);
+    });
+  }, [empleados, mes, anio]);
 
   // Estados de datos financieros
   const [movimientos, setMovimientos] = useState<MovimientoCaja[]>([]);
@@ -53,14 +90,18 @@ export default function FinanzasPage() {
   // Estados para procesar pagos
   const [payingEmployeeId, setPayingEmployeeId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [customLiquidaciones, setCustomLiquidaciones] = useState<Record<string, number>>({});
 
   // Estado para modal de movimiento manual
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [manualMonto, setManualMonto] = useState<string>('');
   const [manualTipo, setManualTipo] = useState<'INGRESO' | 'EGRESO'>('EGRESO');
-  const [manualCategoria, setManualCategoria] = useState<'GASTO_OPERATIVO' | 'OTROS'>('GASTO_OPERATIVO');
+  const [manualCategoriaId, setManualCategoriaId] = useState<string>('');
   const [manualDescripcion, setManualDescripcion] = useState('');
   const [isSavingManual, setIsSavingManual] = useState(false);
+
+  // Categorías de caja cargadas desde la BD
+  const [categoriasMaster, setCategoriasMaster] = useState<CategoriaCaja[]>([]);
 
   // Cargar datos
   const fetchDatosFinancieros = useCallback(async () => {
@@ -88,7 +129,7 @@ export default function FinanzasPage() {
       // 2. Obtener movimientos de caja en el rango
       const { data: movesData, error: movesErr } = await supabase
         .from('movimientos_caja')
-        .select('*')
+        .select('*, categorias_caja(nombre)')
         .gte('fecha', startDate)
         .lt('fecha', endDate)
         .order('fecha', { ascending: false });
@@ -103,10 +144,42 @@ export default function FinanzasPage() {
     }
   }, [mes, anio]);
 
+  // Cargar categorías maestras
+  const fetchCategoriasMaster = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias_caja')
+        .select('*')
+        .order('nombre', { ascending: true });
+      if (error) throw error;
+      setCategoriasMaster(data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  }, []);
+
+  const categoriasFiltradas = useMemo(() => {
+    return categoriasMaster.filter(
+      (cat) => cat.tipo_permitido === 'AMBOS' || cat.tipo_permitido === manualTipo
+    );
+  }, [categoriasMaster, manualTipo]);
+
+  useEffect(() => {
+    if (categoriasFiltradas.length > 0) {
+      const exists = categoriasFiltradas.some((c) => c.id === manualCategoriaId);
+      if (!exists) {
+        setManualCategoriaId(categoriasFiltradas[0].id);
+      }
+    } else {
+      setManualCategoriaId('');
+    }
+  }, [categoriasFiltradas, manualCategoriaId]);
+
   useEffect(() => {
     fetchEmpleados();
     fetchDatosFinancieros();
-  }, [fetchEmpleados, fetchDatosFinancieros]);
+    fetchCategoriasMaster();
+  }, [fetchEmpleados, fetchDatosFinancieros, fetchCategoriasMaster]);
 
   // Auxiliar para verificar si un empleado ya fue liquidado en este período
   const isSueldoLiquidado = useCallback((empleadoId: string) => {
@@ -114,25 +187,29 @@ export default function FinanzasPage() {
     const periodStr = `Período ${mes.toString().padStart(2, '0')}/${anio}`;
     return movimientos.some(
       (m) =>
-        m.categoria === 'SUELDOS_Y_COMISIONES' &&
+        m.categorias_caja?.nombre === 'SUELDOS_Y_COMISIONES' &&
         m.descripcion?.includes(searchDesc) &&
         m.descripcion?.includes(periodStr)
     );
   }, [movimientos, mes, anio]);
 
   // Registrar pago de sueldo
-  const handleLiquidarSueldo = async (empleadoId: string) => {
+  const handleLiquidarSueldo = async (empleadoId: string, montoFinal: number) => {
     setPayingEmployeeId(empleadoId);
     setSuccessMessage(null);
     setErrorFinanzas(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch('/api/finanzas/liquidar-sueldo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ empleadoId, mes, anio }),
+        body: JSON.stringify({ empleadoId, mes, anio, montoFinal }),
       });
 
       const data = await response.json();
@@ -154,8 +231,8 @@ export default function FinanzasPage() {
   // Guardar movimiento manual
   const handleSaveManual = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualMonto || Number(manualMonto) <= 0 || !manualDescripcion.trim()) {
-      alert('Por favor ingresa un monto válido y una descripción.');
+    if (!manualMonto || Number(manualMonto) <= 0 || !manualDescripcion.trim() || !manualCategoriaId) {
+      alert('Por favor ingresa un monto válido, una categoría y una descripción.');
       return;
     }
 
@@ -168,7 +245,7 @@ export default function FinanzasPage() {
           {
             monto: Number(manualMonto),
             tipo_movimiento: manualTipo,
-            categoria: manualCategoria,
+            categoria_id: manualCategoriaId,
             descripcion: manualDescripcion.trim(),
           },
         ]);
@@ -360,9 +437,9 @@ export default function FinanzasPage() {
                 <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
                 <span>Calculando comisiones del período...</span>
               </div>
-            ) : empleados.length === 0 ? (
-              <div className="py-20 text-center text-slate-400 text-xs">
-                No hay empleados registrados en el sistema.
+            ) : empleadosFiltrados.length === 0 ? (
+              <div className="py-20 text-center text-slate-400 text-xs font-semibold">
+                No hay empleados contratados en el período seleccionado.
               </div>
             ) : (
               <div className="overflow-x-auto text-xs text-slate-700 font-sans">
@@ -378,7 +455,7 @@ export default function FinanzasPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {empleados.map((emp) => {
+                    {empleadosFiltrados.map((emp) => {
                       // Filtrar ventas del empleado
                       const ventasEmp = ventas.filter((v) => v.empleado_id === emp.id);
                       const ventasCount = ventasEmp.length;
@@ -396,12 +473,19 @@ export default function FinanzasPage() {
                       }
 
                       const liquidado = isSueldoLiquidado(emp.id);
+                      const altaStr = emp.fecha_alta || emp.creado_en || emp.fecha_ingreso;
+                      const altaPeriod = getPeriodValue(altaStr);
+                      const selectedPeriod = anio * 12 + (mes - 1);
+                      const esAnteriorAlIngreso = selectedPeriod < altaPeriod;
+
+                      const customValue = customLiquidaciones[emp.id];
+                      const montoFinal = customValue !== undefined ? customValue : totalLiquidar;
 
                       return (
                         <tr key={emp.id} className="hover:bg-slate-50/50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-extrabold text-slate-900">{emp.nombre}</div>
-                            <div className="text-[10px] text-slate-400">{emp.rol}</div>
+                            <div className="text-[10px] text-slate-400">{emp.roles?.nombre || 'Sin Rol'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-bold text-slate-800">{emp.tipo_remuneracion}</div>
@@ -415,14 +499,33 @@ export default function FinanzasPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-right font-semibold text-slate-700">
                             ${comisionCalculada.toLocaleString('es-AR')}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right font-black text-indigo-700">
-                            ${totalLiquidar.toLocaleString('es-AR')}
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-indigo-500 font-bold text-xs">$</span>
+                              <input
+                                type="number"
+                                disabled={liquidado || esAnteriorAlIngreso || totalLiquidar <= 0 || payingEmployeeId !== null}
+                                value={montoFinal}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                  setCustomLiquidaciones(prev => ({
+                                    ...prev,
+                                    [emp.id]: val
+                                  }));
+                                }}
+                                className="w-24 text-right font-black text-indigo-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-100 disabled:bg-transparent disabled:border-transparent disabled:text-indigo-700 disabled:shadow-none"
+                              />
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             {liquidado ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-100 select-none">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-100 select-none" title="El período ya fue pagado">
                                 <CheckCircle className="h-3 w-3 text-emerald-500" />
                                 Liquidado
+                              </span>
+                            ) : esAnteriorAlIngreso ? (
+                              <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700 border border-amber-100 select-none" title="El mes seleccionado es anterior al ingreso del empleado">
+                                Previo al Ingreso
                               </span>
                             ) : totalLiquidar <= 0 ? (
                               <span className="inline-flex items-center rounded-md bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 border border-slate-100 select-none">
@@ -431,7 +534,7 @@ export default function FinanzasPage() {
                             ) : (
                               <button
                                 disabled={payingEmployeeId !== null}
-                                onClick={() => handleLiquidarSueldo(emp.id)}
+                                onClick={() => handleLiquidarSueldo(emp.id, montoFinal)}
                                 className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-[10px] font-extrabold text-white shadow hover:bg-indigo-700 active:scale-97 transition-all cursor-pointer disabled:opacity-50"
                               >
                                 {payingEmployeeId === emp.id ? (
@@ -490,7 +593,7 @@ export default function FinanzasPage() {
                       </span>
                     </div>
 
-                    <div className="font-bold text-slate-800">{m.categoria.replace('_', ' ')}</div>
+                    <div className="font-bold text-slate-800">{(m.categorias_caja?.nombre || 'Otros').replace(/_/g, ' ')}</div>
                     <div className="text-[10px] text-slate-500 leading-snug">{m.descripcion}</div>
 
                     <div className="text-right font-black text-slate-900 mt-0.5">
@@ -526,8 +629,6 @@ export default function FinanzasPage() {
                     value={manualTipo}
                     onChange={(e) => {
                       setManualTipo(e.target.value as 'INGRESO' | 'EGRESO');
-                      // Reset categoría por compatibilidad
-                      if (e.target.value === 'INGRESO') setManualCategoria('OTROS');
                     }}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white font-semibold"
                   >
@@ -539,14 +640,15 @@ export default function FinanzasPage() {
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Categoría</label>
                   <select
-                    value={manualCategoria}
-                    onChange={(e) => setManualCategoria(e.target.value as 'GASTO_OPERATIVO' | 'OTROS')}
+                    value={manualCategoriaId}
+                    onChange={(e) => setManualCategoriaId(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white font-semibold"
                   >
-                    {manualTipo === 'EGRESO' && (
-                      <option value="GASTO_OPERATIVO">Gasto Operativo</option>
-                    )}
-                    <option value="OTROS">Otros</option>
+                    {categoriasFiltradas.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nombre.replace(/_/g, ' ')}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

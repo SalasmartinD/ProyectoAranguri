@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useEmpleados } from '@/core/hooks/useEmpleados';
-import { EmpleadoRol, TipoRemuneracion, Empleado } from '@/core/types/empleado';
+import { TipoRemuneracion, Empleado, Role } from '@/core/types/empleado';
+import { supabase } from '@/core/services/supabase';
 import { 
   Users, 
   Plus, 
@@ -14,7 +15,8 @@ import {
   CheckCircle,
   Calendar,
   ShieldAlert,
-  Edit
+  Edit,
+  UserX
 } from 'lucide-react';
 
 export default function EmpleadosPage() {
@@ -23,10 +25,14 @@ export default function EmpleadosPage() {
   // Control del modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Control de baja de empleado
+  const [bajaEmpleadoId, setBajaEmpleadoId] = useState<string | null>(null);
+  const [bajaEmpleadoNombre, setBajaEmpleadoNombre] = useState<string>('');
   
   // Campos del formulario
   const [nombre, setNombre] = useState('');
-  const [rol, setRol] = useState<EmpleadoRol>('Vendedor');
+  const [rolId, setRolId] = useState<string>('');
   const [fechaIngreso, setFechaIngreso] = useState(new Date().toISOString().split('T')[0]);
   const [activo, setActivo] = useState(true);
   const [tipoRemuneracion, setTipoRemuneracion] = useState<TipoRemuneracion>('FIJO');
@@ -37,16 +43,36 @@ export default function EmpleadosPage() {
   // Alertas locales
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Roles cargados desde la base de datos
+  const [rolesMaster, setRolesMaster] = useState<Role[]>([]);
+
+  const fetchRolesMaster = React.useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*')
+        .order('nombre', { ascending: true });
+      if (error) throw error;
+      setRolesMaster(data || []);
+      if (data && data.length > 0 && !rolId) {
+        setRolId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+    }
+  }, [rolId]);
+
   useEffect(() => {
     fetchEmpleados();
     calcularKPIs();
-  }, [fetchEmpleados, calcularKPIs]);
+    fetchRolesMaster();
+  }, [fetchEmpleados, calcularKPIs, fetchRolesMaster]);
 
   // Abrir modal para agregar
   const handleOpenAdd = () => {
     setEditingId(null);
     setNombre('');
-    setRol('Vendedor');
+    setRolId(rolesMaster.length > 0 ? rolesMaster[0].id : '');
     setFechaIngreso(new Date().toISOString().split('T')[0]);
     setActivo(true);
     setTipoRemuneracion('FIJO');
@@ -60,7 +86,7 @@ export default function EmpleadosPage() {
   const handleOpenEdit = (emp: Empleado) => {
     setEditingId(emp.id);
     setNombre(emp.nombre);
-    setRol(emp.rol);
+    setRolId(emp.rol_id || '');
     setFechaIngreso(emp.fecha_ingreso ? new Date(emp.fecha_ingreso).toISOString().split('T')[0] : '');
     setActivo(emp.activo);
     setTipoRemuneracion(emp.tipo_remuneracion || 'FIJO');
@@ -75,17 +101,18 @@ export default function EmpleadosPage() {
     e.preventDefault();
     setSuccessMsg(null);
 
-    if (!nombre.trim()) return;
+    if (!nombre.trim() || !rolId) return;
 
     const inputData = {
       nombre: nombre.trim(),
-      rol,
+      rol_id: rolId,
       fecha_ingreso: fechaIngreso,
       activo,
       tipo_remuneracion: tipoRemuneracion,
       sueldo_fijo: tipoRemuneracion !== 'COMISION' ? Number(sueldoFijo || 0) : 0,
       porcentaje_comision: tipoRemuneracion !== 'FIJO' ? Number(porcentajeComision || 0) : 0,
       dia_cobro: Number(diaCobro || 5),
+      ...(activo ? { fecha_baja: null } : {})
     };
 
     if (editingId) {
@@ -103,6 +130,19 @@ export default function EmpleadosPage() {
         calcularKPIs();
       }
     }
+  };
+
+  // Confirmar y procesar la baja del empleado
+  const confirmDarDeBaja = async () => {
+    if (!bajaEmpleadoId) return;
+    setSuccessMsg(null);
+    const hoy = new Date().toISOString();
+    const ok = await editarEmpleado(bajaEmpleadoId, { fecha_baja: hoy, activo: false });
+    if (ok) {
+      setSuccessMsg(`Empleado "${bajaEmpleadoNombre}" dado de baja correctamente.`);
+      calcularKPIs();
+    }
+    setBajaEmpleadoId(null);
   };
 
   // Encontrar el "empleado del mes"
@@ -194,7 +234,7 @@ export default function EmpleadosPage() {
                       {emp.nombre}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-semibold">
-                      {emp.rol}
+                      {emp.roles?.nombre || 'Sin Rol'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-400 font-semibold">
                       <div className="flex items-center gap-1.5">
@@ -206,24 +246,44 @@ export default function EmpleadosPage() {
                       {emp.tipo_remuneracion || 'FIJO'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-0.5 font-bold ${
-                          emp.activo
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            : 'bg-red-50 text-red-700 border border-red-100'
-                        }`}
-                      >
-                        {emp.activo ? 'Activo' : 'Inactivo'}
-                      </span>
+                      {emp.fecha_baja ? (
+                        <span className="inline-flex items-center rounded-md px-2 py-0.5 font-bold bg-amber-50 text-amber-700 border border-amber-100" title={`Fecha de baja: ${new Date(emp.fecha_baja).toLocaleDateString('es-AR')}`}>
+                          De Baja
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-0.5 font-bold ${
+                            emp.activo
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                              : 'bg-red-50 text-red-700 border border-red-100'
+                          }`}
+                        >
+                          {emp.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => handleOpenEdit(emp)}
-                        className="text-slate-600 hover:text-indigo-600 transition-colors inline-flex items-center gap-1 font-semibold cursor-pointer"
-                        title="Editar Empleado"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(emp)}
+                          className="text-slate-600 hover:text-indigo-600 transition-colors inline-flex items-center gap-1 font-semibold cursor-pointer"
+                          title="Editar Empleado"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        {!emp.fecha_baja && (
+                          <button
+                            onClick={() => {
+                              setBajaEmpleadoId(emp.id);
+                              setBajaEmpleadoNombre(emp.nombre);
+                            }}
+                            className="text-rose-600 hover:text-rose-800 transition-colors inline-flex items-center gap-1 font-semibold cursor-pointer"
+                            title="Dar de Baja"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -291,13 +351,15 @@ export default function EmpleadosPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-500">Rol</label>
                   <select
-                    value={rol}
-                    onChange={(e) => setRol(e.target.value as EmpleadoRol)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
+                    value={rolId}
+                    onChange={(e) => setRolId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white font-semibold"
                   >
-                    <option value="Vendedor">Vendedor</option>
-                    <option value="Administrador">Administrador</option>
-                    <option value="Gerente">Gerente</option>
+                    {rolesMaster.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nombre}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -404,6 +466,43 @@ export default function EmpleadosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Baja */}
+      {bajaEmpleadoId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <ShieldAlert className="h-6 w-6 shrink-0" />
+                <h3 className="font-extrabold text-slate-900 text-sm">Confirmar Baja de Empleado</h3>
+              </div>
+              
+              <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                ¿Estás seguro de que deseas dar de baja a <span className="font-extrabold text-slate-800">{bajaEmpleadoNombre}</span>?
+                Su fecha de baja se registrará con la fecha de hoy y se desactivará de las listas activas, manteniendo su historial comercial.
+              </p>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3 font-sans">
+                <button
+                  type="button"
+                  onClick={() => setBajaEmpleadoId(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-98 transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDarDeBaja}
+                  disabled={loading}
+                  className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-rose-700 active:scale-98 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? 'Procesando...' : 'Confirmar Baja'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

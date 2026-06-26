@@ -22,7 +22,7 @@ export function useEmpleados() {
     try {
       const { data, error: dbError } = await supabase
         .from('empleados')
-        .select('*')
+        .select('*, roles(nombre)')
         .order('nombre', { ascending: true });
 
       if (dbError) throw dbError;
