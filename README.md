@@ -116,14 +116,14 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 
 ---
 
-## 6. QA, Testing Unitario y DevOps (CI/CD)
+## 6. QA y Testing Unitario (Vitest)
 
-Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de cambios críticos, implementamos una infraestructura moderna de pruebas unitarias e integración continua junto con un flujo de despliegue optimizado.
+Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de la lógica de negocio pura, implementamos una infraestructura moderna de pruebas unitarias.
 
-### Pruebas Unitarias con Vitest
-Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
+### 🧪 Pruebas Unitarias
+Elegimos **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
 
-Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
+Hemos cubierto con pruebas de robustez y mocks dos módulos críticos del negocio:
 
 1. **Motor de Liquidación de Haberes** (`src/app/api/finanzas/liquidar-sueldo/liquidacion.test.ts`):
    - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
@@ -142,24 +142,36 @@ Para ejecutar los tests localmente:
 npm run test
 ```
 
-### Pipeline de Integración Continua (CI) 
-Configuramos un pipeline automático mediante **GitHub Actions** (`.github/workflows/ci.yml`) que se dispara en cada `push` o `pull_request` a las ramas principales (`main`, `master`).
+---
 
-El workflow de CI realiza los siguientes pasos en un runner limpio de `ubuntu-latest`:
-1. **Instalación Limpia**: Descarga las dependencias exactas utilizando `npm ci`.
-2. **Auditoría de Estilo (Linter)**: Ejecuta `npm run lint` para garantizar que no existan errores de TypeScript estricto o React (logrando 0 problemas en todo el proyecto).
-3. **Ejecución de Pruebas**: Corre la suite completa de Vitest para asegurar que no se hayan introducido regresiones en la lógica financiera o de filtrado.
-4. **Compilación de Producción**: Ejecuta `npm run build` para asegurar la compilación estática y dinámica exitosa del bundle de Next.js antes de habilitar el despliegue.
+## 🚀 7. Pipeline de CI/CD y Estrategia de Despliegue Continuo (CD)
 
-### Despliegue Continuo (CD) con Vercel
-La plataforma está completamente integrada con **Vercel** para la entrega continua y el alojamiento de producción:
-* **Despliegues en Caliente**: Cada cambio integrado en la rama `main` dispara una build automática de producción en Vercel, minimizando el tiempo de entrega de nuevas funcionalidades.
-* **Previsualización de Ramas (Preview Deploys)**: Las solicitudes de extracción (Pull Requests) generan entornos aislados e independientes de previsualización para realizar pruebas de aceptación y control de calidad antes de la fusión.
-* **Optimización de Hosting**: Configuración nativa para las rutas dinámicas y el procesamiento de recursos estáticos de Next.js. Las variables de entorno de Supabase y Google Gemini se encuentran encriptadas y sincronizadas de manera segura en la consola del proyecto.
+La plataforma implementa un flujo de entrega automatizado de nivel corporativo utilizando **GitHub Actions** para la Integración Continua (CI) y **Vercel** para el Despliegue Continuo (CD), protegiendo la integridad del entorno de producción de forma nativa.
+
+### 🔄 El Flujo de Trabajo Basado en Ramas y Pull Requests
+Para evitar despliegues accidentales o código roto en producción, se estableció un **Guardrail de Producción** estricto en la rama principal (`main`):
+
+1. **Desarrollo Aislado:** Los cambios y nuevas funcionalidades se trabajan en ramas secundarias dinámicas (`feature/*`, `test/*`, `bugfix/*`).
+2. **Disparo de la Automatización (CI):** Al subir la rama y abrir un **Pull Request (PR)** en GitHub, se dispara el workflow `.github/workflows/ci.yml`. Una máquina virtual de Linux (Ubuntu) clona el repositorio, valida el tipado estricto de TypeScript, ejecuta el linter de Next.js y corre la suite de pruebas unitarias con **Vitest**.
+3. **Fusión Eficiente (Auto-Merge):** Se configuró la regla de protección de ramas en GitHub que exige que todos los checks del pipeline den verde (`✔ All checks have passed`) antes de permitir la fusión. Al activar **Auto-Merge**, GitHub une el código a `main` de forma autónoma únicamente si los tests pasaron con éxito. Si un test falla, el botón se bloquea en rojo y el despliegue se cancela.
+4. **Despliegue Continuo en Tiempo Real (CD):** Una vez que el PR se fusiona de forma segura en `main`, Vercel intercepta el cambio de inmediato, compila la aplicación en producción y actualiza la URL pública del ERP en menos de un minuto.
+
+```mermaid
+graph TD
+    A[Desarrollador: git push rama-secundaria] --> B[Abrir Pull Request en GitHub]
+    B --> C{GitHub Actions: Corre Vitest + Lint}
+    C -- ❌ Falla algún Test --> D[PR Bloqueado: Producción Protegida]
+    C -- ✔ Checks en Verde --> E[Auto-Merge Automático a main]
+    E --> F[Vercel: Build y Despliegue a URL Pública]
+```
+
+### ⚙️ Optimización y Hosting en Vercel
+* **Alineación con Next.js 16**: Optimización nativa para las rutas dinámicas y el procesamiento de recursos estáticos de Next.js.
+* **Configuración Segura de Variables de Entorno**: Las variables de entorno de Supabase y Google Gemini se encuentran encriptadas y sincronizadas de manera segura en la consola de Vercel, garantizando un entorno aislado.
 
 ---
 
-## 7. Guía de Instalación y Requisitos
+## 8. Guía de Instalación y Requisitos
 
 ### Requisitos Previos
 *   **Node.js**: Versión 18.0 o superior instalada.
