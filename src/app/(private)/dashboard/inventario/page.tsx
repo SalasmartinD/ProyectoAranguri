@@ -12,8 +12,11 @@ import {
   Loader2, 
   AlertCircle, 
   CheckCircle,
-  Eye
+  Eye,
+  Sparkles
 } from 'lucide-react';
+import { ImageUploader } from '@/components/dashboard/ImageUploader';
+import { supabase } from '@/core/services/supabase';
 
 export default function InventarioPage() {
   const { vehiculos, loading, error, fetchVehiculos, agregarVehiculo, editarVehiculo, eliminarVehiculo } = useVehiculos();
@@ -31,7 +34,13 @@ export default function InventarioPage() {
   const [precioVenta, setPrecioVenta] = useState<number>(0);
   const [kilometros, setKilometros] = useState<number>(0);
   const [estado, setEstado] = useState<VehiculoEstado>('Disponible');
-  const [imagenUrl, setImagenUrl] = useState('');
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [descripcion, setDescripcion] = useState('');
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Mensajes de éxito locales
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -58,7 +67,11 @@ export default function InventarioPage() {
     setPrecioVenta(0);
     setKilometros(0);
     setEstado('Disponible');
-    setImagenUrl('');
+    setExistingImages([]);
+    setSelectedFiles([]);
+    setUploadProgress(null);
+    setFormError(null);
+    setDescripcion('');
     setIsFormOpen(true);
   };
 
@@ -72,7 +85,11 @@ export default function InventarioPage() {
     setPrecioVenta(v.precio_venta);
     setKilometros(v.kilometros);
     setEstado(v.estado);
-    setImagenUrl(v.imagen_url || '');
+    setExistingImages(v.imagenes || []);
+    setSelectedFiles([]);
+    setUploadProgress(null);
+    setFormError(null);
+    setDescripcion(v.descripcion || '');
     setIsFormOpen(true);
   };
 
@@ -80,30 +97,76 @@ export default function InventarioPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg(null);
+    setFormError(null);
+    setIsSubmitting(true);
+    setUploadProgress(null);
 
-    const inputData = {
-      marca,
-      modelo,
-      anio: Number(anio),
-      precio_compra: Number(precioCompra),
-      precio_venta: Number(precioVenta),
-      kilometros: Number(kilometros),
-      estado,
-      imagen_url: imagenUrl.trim() || null,
-    };
+    try {
+      const targetId = editingId || crypto.randomUUID();
+      const uploadedUrls: string[] = [];
 
-    if (editingId) {
-      const ok = await editarVehiculo(editingId, inputData);
-      if (ok) {
-        setSuccessMsg('Vehículo actualizado exitosamente.');
-        setIsFormOpen(false);
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        setUploadProgress(`Subiendo imágenes (${i + 1}/${selectedFiles.length})...`);
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const fileName = `${timestamp}_${randomStr}.${fileExt}`;
+        const filePath = `autos/${targetId}/${fileName}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('vehiculos')
+          .upload(filePath, file);
+
+        if (uploadErr) {
+          throw new Error(`Error al subir la imagen ${file.name}: ${uploadErr.message}`);
+        }
+
+        const { data } = supabase.storage
+          .from('vehiculos')
+          .getPublicUrl(filePath);
+
+        if (data?.publicUrl) {
+          uploadedUrls.push(data.publicUrl);
+        }
       }
-    } else {
-      const res = await agregarVehiculo(inputData);
-      if (res) {
-        setSuccessMsg('Vehículo agregado exitosamente.');
-        setIsFormOpen(false);
+
+      const finalImagenes = [...existingImages, ...uploadedUrls];
+
+      const inputData = {
+        marca,
+        modelo,
+        anio: Number(anio),
+        precio_compra: Number(precioCompra),
+        precio_venta: Number(precioVenta),
+        kilometros: Number(kilometros),
+        estado,
+        imagenes: finalImagenes,
+        descripcion: descripcion.trim() || null,
+      };
+
+      if (editingId) {
+        const ok = await editarVehiculo(editingId, inputData);
+        if (ok) {
+          setSuccessMsg('Vehículo actualizado exitosamente.');
+          setIsFormOpen(false);
+        }
+      } else {
+        const res = await agregarVehiculo({
+          id: targetId,
+          ...inputData,
+        });
+        if (res) {
+          setSuccessMsg('Vehículo agregado exitosamente.');
+          setIsFormOpen(false);
+        }
       }
+    } catch (err: any) {
+      console.error('Error al guardar vehículo:', err);
+      setFormError(err?.message || 'Error al procesar la subida o guardar el registro.');
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -195,8 +258,8 @@ export default function InventarioPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-200">
-                          {v.imagen_url ? (
-                            <img src={v.imagen_url} alt="" className="h-full w-full object-cover" />
+                          {v.imagenes && v.imagenes.length > 0 ? (
+                            <img src={v.imagenes[0]} alt="" className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full bg-slate-100 flex items-center justify-center text-[8px] text-slate-400 font-bold">
                               SIN FOTO
@@ -275,6 +338,15 @@ export default function InventarioPage() {
 
             {/* Body Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[500px] overflow-y-auto">
+              {formError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-red-800 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
+                  <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Error al Guardar</span>
+                    {formError}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-500">Marca</label>
@@ -352,7 +424,7 @@ export default function InventarioPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1 col-span-2">
                   <label className="text-xs font-semibold text-slate-500">Estado</label>
                   <select
                     value={estado}
@@ -364,16 +436,76 @@ export default function InventarioPage() {
                     <option value="Vendido">Vendido</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500">URL Imagen (Opcional)</label>
-                  <input
-                    type="text"
-                    value={imagenUrl}
-                    onChange={(e) => setImagenUrl(e.target.value)}
-                    placeholder="https://ejemplo.com/foto.jpg"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
-                  />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-500 font-sans">Descripción del Vehículo (Opcional)</label>
+                  <button
+                    type="button"
+                    disabled={!descripcion.trim() || isOptimizing}
+                    onClick={async () => {
+                      setIsOptimizing(true);
+                      setFormError(null);
+                      try {
+                        const response = await fetch('/api/generate-description', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ draft: descripcion }),
+                        });
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          throw new Error(data.error || 'Error al conectar con el servidor.');
+                        }
+                        
+                        if (data.description) {
+                          setDescripcion(data.description);
+                        }
+                      } catch (err: any) {
+                        console.error('Error optimizando descripción:', err);
+                        setFormError(err?.message || 'No se pudo optimizar la descripción con Gemini.');
+                      } finally {
+                        setIsOptimizing(false);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold transition-all select-none cursor-pointer ${
+                      isOptimizing 
+                        ? 'bg-indigo-50 text-indigo-500 animate-pulse' 
+                        : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100/70 active:scale-97'
+                    } disabled:opacity-50`}
+                  >
+                    {isOptimizing ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Optimizando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3 w-3" />
+                        Reformular con IA
+                      </>
+                    )}
+                  </button>
                 </div>
+                <textarea
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  placeholder="Ej: tapizado de cuero impecable, services oficiales al día, algunos rayones leves en paragolpes trasero, único dueño..."
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <ImageUploader
+                  existingImages={existingImages}
+                  onExistingImagesChange={setExistingImages}
+                  selectedFiles={selectedFiles}
+                  onSelectedFilesChange={setSelectedFiles}
+                />
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
@@ -386,10 +518,17 @@ export default function InventarioPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all disabled:opacity-50"
+                  disabled={loading || isSubmitting}
+                  className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {loading ? 'Guardando...' : editingId ? 'Actualizar Cambios' : 'Registrar Vehículo'}
+                  {(loading || isSubmitting) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {uploadProgress
+                    ? uploadProgress
+                    : isSubmitting
+                    ? 'Guardando...'
+                    : editingId
+                    ? 'Actualizar Cambios'
+                    : 'Registrar Vehículo'}
                 </button>
               </div>
             </form>

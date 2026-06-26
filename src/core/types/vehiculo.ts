@@ -9,11 +9,13 @@ export interface Vehiculo {
   precio_venta: number;
   kilometros: number;
   estado: VehiculoEstado;
-  imagen_url?: string | null;
+  imagenes: string[];
+  descripcion?: string | null;
   creado_en: string;
 }
 
 export interface VehiculoInput {
+  id?: string;
   marca: string;
   modelo: string;
   anio: number;
@@ -21,5 +23,6 @@ export interface VehiculoInput {
   precio_venta: number;
   kilometros: number;
   estado: VehiculoEstado;
-  imagen_url?: string | null;
+  imagenes: string[];
+  descripcion?: string | null;
 }

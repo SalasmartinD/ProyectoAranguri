@@ -15,6 +15,7 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
   const [vehiculo, setVehiculo] = useState<Vehiculo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
 
   useEffect(() => {
     async function fetchVehiculo() {
@@ -99,16 +100,37 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
       {/* Detalle del Vehículo */}
       <div className="grid gap-8 md:grid-cols-2">
         {/* Galería / Imagen */}
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm aspect-video md:aspect-auto md:h-[420px]">
-          {vehiculo.imagen_url ? (
-            <img
-              src={vehiculo.imagen_url}
-              alt={`${vehiculo.marca} ${vehiculo.modelo}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-slate-400 text-sm font-semibold bg-gradient-to-br from-slate-50 to-slate-100">
-              Sin foto disponible
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm aspect-video md:aspect-auto md:h-[360px]">
+            {vehiculo.imagenes && vehiculo.imagenes.length > 0 ? (
+              <img
+                src={vehiculo.imagenes[activeImgIndex]}
+                alt={`${vehiculo.marca} ${vehiculo.modelo}`}
+                className="h-full w-full object-cover transition-all duration-300 animate-in fade-in"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-400 text-sm font-semibold bg-gradient-to-br from-slate-50 to-slate-100">
+                Sin foto disponible
+              </div>
+            )}
+          </div>
+
+          {/* Miniaturas */}
+          {vehiculo.imagenes && vehiculo.imagenes.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-200">
+              {vehiculo.imagenes.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImgIndex(idx)}
+                  className={`relative h-16 w-24 flex-shrink-0 rounded-xl overflow-hidden border-2 bg-slate-50 transition-all cursor-pointer ${
+                    idx === activeImgIndex
+                      ? 'border-indigo-600 ring-2 ring-indigo-100 scale-102'
+                      : 'border-transparent opacity-60 hover:opacity-100 hover:scale-101'
+                  }`}
+                >
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -174,6 +196,16 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
           </a>
         </div>
       </div>
+
+      {/* Sección de Descripción de Ancho Completo */}
+      {vehiculo.descripcion && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-3.5 animate-in fade-in duration-300">
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Descripción y Detalles Destacados</h2>
+          <p className="text-slate-600 text-sm md:text-base leading-relaxed whitespace-pre-line font-medium">
+            {vehiculo.descripcion}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

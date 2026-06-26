@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // 3. Consultar stock disponible de Supabase
     const { data: vehiculos, error: dbError } = await supabase
       .from('vehiculos')
-      .select('id, marca, modelo, anio, precio_venta, kilometros, estado, imagen_url')
+      .select('id, marca, modelo, anio, precio_venta, kilometros, estado, imagenes')
       .eq('estado', 'Disponible');
 
     if (dbError) {
@@ -55,17 +55,21 @@ export async function POST(request: Request) {
       anio: v.anio,
       precio: `$${v.precio_venta.toLocaleString('es-AR')}`,
       kilometros: `${v.kilometros.toLocaleString('es-AR')} km`,
-      imagen: v.imagen_url || 'Sin imagen'
+      imagen: (v.imagenes && v.imagenes.length > 0) ? v.imagenes[0] : 'Sin imagen'
     }));
 
     // 5. Configurar el System Prompt estricto
-    const systemInstruction = `Sos el asesor virtual de la concesionaria. Tu stock real disponible es el siguiente:
+    const systemInstruction = `Eres el asistente virtual de la concesionaria AutomotoresSalas. Tu único objetivo es asesorar a los clientes basándote estrictamente en nuestro stock de vehículos disponible.
+
+    Este es nuestro stock disponible actual en formato JSON:
     ${JSON.stringify(stockContext, null, 2)}
-    Respondé las dudas de forma amable basándote solo
-    en estos datos. Si el usuario pide un vehículo, marca, modelo o tipo que 
-    no está en la lista anterior, debes ser transparente indicando que no está disponible actualmente, y
-    sugerirle la alternativa disponible más cercana en precio o segmento dentro de nuestro stock actual.
-    No inventes vehículos que no estén en el JSON.`;
+
+    Normas estrictas de respuesta:
+    1. No utilices negritas con asteriscos (ej: no uses **texto**), ni hagas asteriscos en ningun momento del chat, ni uses , cursivas ni otros formatos markdown en tus respuestas. Devuelve texto plano, limpio y estructurado de forma legible con saltos de línea estándar.
+    2. Respeta estrictamente los precios y kilómetros del stock provisto. Jamás alteres los precios de venta, ni ofrezcas rebajas o bonificaciones por tu cuenta.
+    3. No digas cosas que no sabes ni inventes características o stock de autos que no figuren en la lista anterior. Si te piden un vehículo o marca no disponible, aclara que no está en stock actualmente y sugiere la alternativa disponible más cercana en precio o segmento.
+    4. No menciones que la imagen no está disponible o que tiene texto de placeholder. Si preguntan por fotos o aspecto visual, indícales amablemente que pueden ver la galería completa ingresando al botón "Detalles" en la ficha de cada auto de nuestro catálogo.
+    5. Para preguntas sobre financiación personalizada, cotizaciones de usados, trámites complejos o si el cliente desea agendar una visita, explícale cordialmente que un asesor comercial humano puede coordinar esos detalles y recomiéndale presionar el botón de WhatsApp del sitio.`;
 
     // 6. Generar respuesta con Gemini
     const textResponse = await generateChatResponse(messages, systemInstruction);

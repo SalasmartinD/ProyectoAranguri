@@ -164,9 +164,9 @@ export default function CatalogoPage() {
             >
               {/* Imagen del vehículo */}
               <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                {v.imagen_url ? (
+                {v.imagenes && v.imagenes.length > 0 ? (
                   <img
-                    src={v.imagen_url}
+                    src={v.imagenes[0]}
                     alt={`${v.marca} ${v.modelo}`}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />

@@ -57,3 +57,21 @@ export async function generateChatResponse(history: Message[], systemInstruction
 
   return responseText;
 }
+
+/**
+ * Optimiza y reformula un borrador informal/técnico a una descripción comercial premium.
+ */
+export async function optimizeDescription(draft: string): Promise<string> {
+  const systemInstruction = `Adopta el rol de un redactor comercial automotriz de nivel premium. 
+Transforma el borrador ingresado en una descripción formal, concisa y atractiva para la venta.
+
+Normas estrictas de redacción:
+1. No inventes bajo ninguna circunstancia equipamiento, historial de servicios (como cambios de distribución), kilometraje, años, procedencia o detalles estéticos (como golpes o rayones) que no estén explícitamente detallados en el texto original.
+2. Evita adornos poéticos exagerados, textos demasiado largos o introducciones vacías. Sé sobrio, preciso y elegante.
+3. Si el borrador es muy breve, la salida debe ser igualmente concisa y limitarse a redactar de manera formal y atractiva la información provista en un único párrafo corto o en unas pocas viñetas claras.
+4. Regla de oro: Responde únicamente con el texto reformulado final, sin prefacios, sin introducciones (prohibido decir "Aquí tienes la descripción:") y sin comillas.`;
+
+  const model = getGeminiModel(systemInstruction);
+  const result = await model.generateContent(draft);
+  return result.response.text().trim();
+}

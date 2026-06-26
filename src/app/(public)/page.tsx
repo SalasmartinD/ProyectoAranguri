@@ -6,7 +6,7 @@ export default async function LandingPage() {
   // Obtener 3 vehículos destacados de la base de datos
   const { data: vehiculos } = await supabase
     .from('vehiculos')
-    .select('id, marca, modelo, anio, precio_venta, kilometros, estado, imagen_url')
+    .select('id, marca, modelo, anio, precio_venta, kilometros, estado, imagenes')
     .eq('estado', 'Disponible')
     .order('creado_en', { ascending: false })
     .limit(3);
@@ -76,9 +76,9 @@ export default async function LandingPage() {
               >
                 {/* Imagen */}
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                  {v.imagen_url ? (
+                  {v.imagenes && v.imagenes.length > 0 ? (
                     <img
-                      src={v.imagen_url}
+                      src={v.imagenes[0]}
                       alt={`${v.marca} ${v.modelo}`}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />

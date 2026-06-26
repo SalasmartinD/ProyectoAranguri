@@ -14,8 +14,11 @@ import {
   Car,
   AlertCircle, 
   CheckCircle,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react';
+import { ImageUploader } from '@/components/dashboard/ImageUploader';
+import { supabase } from '@/core/services/supabase';
 
 export default function OperacionesPage() {
   const { transacciones, loading: txLoading, error: txError, fetchTransacciones, registrarCompra, registrarVenta } = useOperaciones();
@@ -39,7 +42,10 @@ export default function OperacionesPage() {
   const [precioCompra, setPrecioCompra] = useState<number>(0);
   const [precioVenta, setPrecioVenta] = useState<number>(0);
   const [kilometros, setKilometros] = useState<number>(0);
-  const [imagenUrl, setImagenUrl] = useState('');
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchTransacciones();
@@ -75,37 +81,81 @@ export default function OperacionesPage() {
     e.preventDefault();
     setSuccessMsg(null);
     setErrorMsg(null);
+    setIsSubmitting(true);
+    setUploadProgress(null);
 
     if (!selectedEmpleadoId || !marca || !modelo || precioCompra <= 0 || precioVenta <= 0 || kilometros < 0) {
       setErrorMsg('Por favor completa todos los campos del vehículo y selecciona un empleado.');
+      setIsSubmitting(false);
       return;
     }
 
-    const nuevoVehiculo: VehiculoInput = {
-      marca,
-      modelo,
-      anio: Number(anio),
-      precio_compra: Number(precioCompra),
-      precio_venta: Number(precioVenta),
-      kilometros: Number(kilometros),
-      estado: 'Disponible',
-      imagen_url: imagenUrl.trim() || null,
-    };
+    try {
+      const targetId = crypto.randomUUID();
+      const uploadedUrls: string[] = [];
 
-    const ok = await registrarCompra(nuevoVehiculo, selectedEmpleadoId);
-    if (ok) {
-      setSuccessMsg('Compra registrada con éxito. El vehículo ha sido ingresado al stock como "Disponible".');
-      setMarca('');
-      setModelo('');
-      setAnio(new Date().getFullYear());
-      setPrecioCompra(0);
-      setPrecioVenta(0);
-      setKilometros(0);
-      setImagenUrl('');
-      setSelectedEmpleadoId('');
-      fetchVehiculos(true); // Refrescar lista de vehículos disponibles
-    } else {
-      setErrorMsg('Error al registrar el vehículo y la transacción de compra.');
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        setUploadProgress(`Subiendo imágenes (${i + 1}/${selectedFiles.length})...`);
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const fileName = `${timestamp}_${randomStr}.${fileExt}`;
+        const filePath = `autos/${targetId}/${fileName}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('vehiculos')
+          .upload(filePath, file);
+
+        if (uploadErr) {
+          throw new Error(`Error al subir la imagen ${file.name}: ${uploadErr.message}`);
+        }
+
+        const { data } = supabase.storage
+          .from('vehiculos')
+          .getPublicUrl(filePath);
+
+        if (data?.publicUrl) {
+          uploadedUrls.push(data.publicUrl);
+        }
+      }
+
+      const finalImagenes = [...existingImages, ...uploadedUrls];
+
+      const nuevoVehiculo: VehiculoInput = {
+        id: targetId,
+        marca,
+        modelo,
+        anio: Number(anio),
+        precio_compra: Number(precioCompra),
+        precio_venta: Number(precioVenta),
+        kilometros: Number(kilometros),
+        estado: 'Disponible',
+        imagenes: finalImagenes,
+      };
+
+      const ok = await registrarCompra(nuevoVehiculo, selectedEmpleadoId);
+      if (ok) {
+        setSuccessMsg('Compra registrada con éxito. El vehículo ha sido ingresado al stock como "Disponible".');
+        setMarca('');
+        setModelo('');
+        setAnio(new Date().getFullYear());
+        setPrecioCompra(0);
+        setPrecioVenta(0);
+        setKilometros(0);
+        setExistingImages([]);
+        setSelectedFiles([]);
+        setSelectedEmpleadoId('');
+        fetchVehiculos(true); // Refrescar lista de vehículos disponibles
+      } else {
+        setErrorMsg('Error al registrar el vehículo y la transacción de compra.');
+      }
+    } catch (err: any) {
+      console.error('Error al registrar la compra:', err);
+      setErrorMsg(err?.message || 'Error al subir las imágenes o registrar el vehículo.');
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -332,21 +382,25 @@ export default function OperacionesPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500">URL Imagen (Opcional)</label>
-                  <input
-                    type="text"
-                    value={imagenUrl}
-                    onChange={(e) => setImagenUrl(e.target.value)}
-                    placeholder="https://ejemplo.com/foto.jpg"
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                  <ImageUploader
+                    existingImages={existingImages}
+                    onExistingImagesChange={setExistingImages}
+                    selectedFiles={selectedFiles}
+                    onSelectedFilesChange={setSelectedFiles}
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="flex w-full justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all"
+                  disabled={txLoading || isSubmitting}
+                  className="flex w-full justify-center items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all disabled:opacity-50"
                 >
-                  Registrar Ingreso y Pago
+                  {(txLoading || isSubmitting) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {uploadProgress
+                    ? uploadProgress
+                    : isSubmitting
+                    ? 'Guardando...'
+                    : 'Registrar Ingreso y Pago'}
                 </button>
               </form>
             )}
