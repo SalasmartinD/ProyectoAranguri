@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useEmpleados } from '@/core/hooks/useEmpleados';
-import { EmpleadoRol } from '@/core/types/empleado';
+import { EmpleadoRol, TipoRemuneracion, Empleado } from '@/core/types/empleado';
 import { 
   Users, 
   Plus, 
@@ -13,17 +13,26 @@ import {
   AlertCircle, 
   CheckCircle,
   Calendar,
-  ShieldAlert
+  ShieldAlert,
+  Edit
 } from 'lucide-react';
 
 export default function EmpleadosPage() {
-  const { empleados, loading, error, kpis, fetchEmpleados, agregarEmpleado, calcularKPIs } = useEmpleados();
+  const { empleados, loading, error, kpis, fetchEmpleados, agregarEmpleado, editarEmpleado, calcularKPIs } = useEmpleados();
 
   // Control del modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Campos del formulario
   const [nombre, setNombre] = useState('');
   const [rol, setRol] = useState<EmpleadoRol>('Vendedor');
   const [fechaIngreso, setFechaIngreso] = useState(new Date().toISOString().split('T')[0]);
+  const [activo, setActivo] = useState(true);
+  const [tipoRemuneracion, setTipoRemuneracion] = useState<TipoRemuneracion>('FIJO');
+  const [sueldoFijo, setSueldoFijo] = useState<number | ''>('');
+  const [porcentajeComision, setPorcentajeComision] = useState<number | ''>('');
+  const [diaCobro, setDiaCobro] = useState<number | ''>(5);
 
   // Alertas locales
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -33,31 +42,70 @@ export default function EmpleadosPage() {
     calcularKPIs();
   }, [fetchEmpleados, calcularKPIs]);
 
-  // Manejar adición de empleado
+  // Abrir modal para agregar
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setNombre('');
+    setRol('Vendedor');
+    setFechaIngreso(new Date().toISOString().split('T')[0]);
+    setActivo(true);
+    setTipoRemuneracion('FIJO');
+    setSueldoFijo('');
+    setPorcentajeComision('');
+    setDiaCobro(5);
+    setIsModalOpen(true);
+  };
+
+  // Abrir modal para editar
+  const handleOpenEdit = (emp: Empleado) => {
+    setEditingId(emp.id);
+    setNombre(emp.nombre);
+    setRol(emp.rol);
+    setFechaIngreso(emp.fecha_ingreso ? new Date(emp.fecha_ingreso).toISOString().split('T')[0] : '');
+    setActivo(emp.activo);
+    setTipoRemuneracion(emp.tipo_remuneracion || 'FIJO');
+    setSueldoFijo(emp.sueldo_fijo !== undefined && emp.sueldo_fijo !== null ? emp.sueldo_fijo : '');
+    setPorcentajeComision(emp.porcentaje_comision !== undefined && emp.porcentaje_comision !== null ? emp.porcentaje_comision : '');
+    setDiaCobro(emp.dia_cobro !== undefined && emp.dia_cobro !== null ? emp.dia_cobro : 5);
+    setIsModalOpen(true);
+  };
+
+  // Manejar envío de formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg(null);
 
     if (!nombre.trim()) return;
 
-    const res = await agregarEmpleado({
+    const inputData = {
       nombre: nombre.trim(),
       rol,
       fecha_ingreso: fechaIngreso,
-      activo: true,
-    });
+      activo,
+      tipo_remuneracion: tipoRemuneracion,
+      sueldo_fijo: tipoRemuneracion !== 'COMISION' ? Number(sueldoFijo || 0) : 0,
+      porcentaje_comision: tipoRemuneracion !== 'FIJO' ? Number(porcentajeComision || 0) : 0,
+      dia_cobro: Number(diaCobro || 5),
+    };
 
-    if (res) {
-      setSuccessMsg('Empleado agregado correctamente al equipo.');
-      setIsModalOpen(false);
-      setNombre('');
-      setRol('Vendedor');
-      setFechaIngreso(new Date().toISOString().split('T')[0]);
-      calcularKPIs(); // Recalcular KPIs incluyendo el nuevo
+    if (editingId) {
+      const ok = await editarEmpleado(editingId, inputData);
+      if (ok) {
+        setSuccessMsg('Empleado actualizado correctamente.');
+        setIsModalOpen(false);
+        calcularKPIs();
+      }
+    } else {
+      const res = await agregarEmpleado(inputData);
+      if (res) {
+        setSuccessMsg('Empleado registrado correctamente.');
+        setIsModalOpen(false);
+        calcularKPIs();
+      }
     }
   };
 
-  // Encontrar el "empleado del mes" (el que tenga mayor monto de ventas)
+  // Encontrar el "empleado del mes"
   const empleadoEstrella = [...kpis].sort((a, b) => b.montoTotalMes - a.montoTotalMes)[0];
 
   return (
@@ -69,8 +117,8 @@ export default function EmpleadosPage() {
           <p className="text-slate-500 text-sm">Monitorea KPIs de ventas mensuales, roles e ingresos al equipo.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 transition-colors shrink-0"
+          onClick={handleOpenAdd}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 transition-colors shrink-0 cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           Registrar Empleado
@@ -134,7 +182,9 @@ export default function EmpleadosPage() {
                   <th className="px-6 py-4">Nombre</th>
                   <th className="px-6 py-4">Rol</th>
                   <th className="px-6 py-4">Fecha Ingreso</th>
+                  <th className="px-6 py-4">Esquema</th>
                   <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -143,7 +193,7 @@ export default function EmpleadosPage() {
                     <td className="px-6 py-4 whitespace-nowrap font-extrabold text-slate-900">
                       {emp.nombre}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap font-semibold">
                       {emp.rol}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-400 font-semibold">
@@ -151,6 +201,9 @@ export default function EmpleadosPage() {
                         <Calendar className="h-3.5 w-3.5 text-slate-400" />
                         <span>{new Date(emp.fecha_ingreso).toLocaleDateString('es-AR')}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
+                      {emp.tipo_remuneracion || 'FIJO'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -162,6 +215,15 @@ export default function EmpleadosPage() {
                       >
                         {emp.activo ? 'Activo' : 'Inactivo'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button
+                        onClick={() => handleOpenEdit(emp)}
+                        className="text-slate-600 hover:text-indigo-600 transition-colors inline-flex items-center gap-1 font-semibold cursor-pointer"
+                        title="Editar Empleado"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -194,13 +256,15 @@ export default function EmpleadosPage() {
         </div>
       </div>
 
-      {/* Modal Registrar Empleado */}
+      {/* Modal Registrar/Editar Empleado */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h3 className="font-bold text-slate-900 text-sm">Registrar Nuevo Empleado</h3>
+              <h3 className="font-bold text-slate-900 text-sm">
+                {editingId ? 'Editar Empleado' : 'Registrar Nuevo Empleado'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-all"
@@ -210,7 +274,7 @@ export default function EmpleadosPage() {
             </div>
 
             {/* Body Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[500px] overflow-y-auto">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-500">Nombre Completo</label>
                 <input
@@ -223,44 +287,120 @@ export default function EmpleadosPage() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-500">Rol</label>
-                <select
-                  value={rol}
-                  onChange={(e) => setRol(e.target.value as EmpleadoRol)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
-                >
-                  <option value="Vendedor">Vendedor</option>
-                  <option value="Administrador">Administrador</option>
-                  <option value="Gerente">Gerente</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Rol</label>
+                  <select
+                    value={rol}
+                    onChange={(e) => setRol(e.target.value as EmpleadoRol)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
+                  >
+                    <option value="Vendedor">Vendedor</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Gerente">Gerente</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Fecha de Ingreso</label>
+                  <input
+                    type="date"
+                    required
+                    value={fechaIngreso}
+                    onChange={(e) => setFechaIngreso(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-500">Fecha de Ingreso</label>
-                <input
-                  type="date"
-                  required
-                  value={fechaIngreso}
-                  onChange={(e) => setFechaIngreso(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Tipo Remuneración</label>
+                  <select
+                    value={tipoRemuneracion}
+                    onChange={(e) => setTipoRemuneracion(e.target.value as TipoRemuneracion)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white font-semibold"
+                  >
+                    <option value="FIJO">Fijo</option>
+                    <option value="COMISION">Comisión</option>
+                    <option value="MIXTO">Mixto</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Día de Cobro (1-31)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    value={diaCobro}
+                    onChange={(e) => setDiaCobro(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              {tipoRemuneracion !== 'COMISION' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Sueldo Fijo ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={sueldoFijo}
+                    onChange={(e) => setSueldoFijo(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ej: 500000"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              )}
+
+              {tipoRemuneracion !== 'FIJO' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Porcentaje Comisión (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    required
+                    value={porcentajeComision}
+                    onChange={(e) => setPorcentajeComision(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ej: 1.5"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              )}
+
+              {editingId && (
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="activo"
+                    checked={activo}
+                    onChange={(e) => setActivo(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <label htmlFor="activo" className="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                    Empleado Activo (aparece en las listas)
+                  </label>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3 font-sans">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-98 transition-all"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-98 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all disabled:opacity-50"
+                  className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-700 active:scale-98 transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  {loading ? 'Agregando...' : 'Registrar Empleado'}
+                  {loading ? (editingId ? 'Guardando...' : 'Registrando...') : (editingId ? 'Guardar Cambios' : 'Registrar Empleado')}
                 </button>
               </div>
             </form>
