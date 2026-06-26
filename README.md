@@ -121,9 +121,9 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de cambios críticos, implementamos una infraestructura moderna de pruebas unitarias e integración continua junto con un flujo de despliegue optimizado.
 
 ### 🧪 Pruebas Unitarias con Vitest
-Elegimos **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
+Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
 
-Hemos cubierto con pruebas de robustez y mocks dos módulos críticos del negocio:
+Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
 
 1. **Motor de Liquidación de Haberes** (`src/app/api/finanzas/liquidar-sueldo/liquidacion.test.ts`):
    - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
@@ -142,7 +142,7 @@ Para ejecutar los tests localmente:
 npm run test
 ```
 
-### 🛠️ Pipeline de Integración Continua (CI)
+### Pipeline de Integración Continua (CI)
 Configuramos un pipeline automático mediante **GitHub Actions** (`.github/workflows/ci.yml`) que se dispara en cada `push` o `pull_request` a las ramas principales (`main`, `master`).
 
 El workflow de CI realiza los siguientes pasos en un runner limpio de `ubuntu-latest`:
@@ -151,7 +151,7 @@ El workflow de CI realiza los siguientes pasos en un runner limpio de `ubuntu-la
 3. **Ejecución de Pruebas**: Corre la suite completa de Vitest para asegurar que no se hayan introducido regresiones en la lógica financiera o de filtrado.
 4. **Compilación de Producción**: Ejecuta `npm run build` para asegurar la compilación estática y dinámica exitosa del bundle de Next.js antes de habilitar el despliegue.
 
-### 🚀 Despliegue Continuo (CD) con Vercel
+### Despliegue Continuo (CD) con Vercel
 La plataforma está completamente integrada con **Vercel** para la entrega continua y el alojamiento de producción:
 * **Despliegues en Caliente**: Cada cambio integrado en la rama `main` dispara una build automática de producción en Vercel, minimizando el tiempo de entrega de nuevas funcionalidades.
 * **Previsualización de Ramas (Preview Deploys)**: Las solicitudes de extracción (Pull Requests) generan entornos aislados e independientes de previsualización para realizar pruebas de aceptación y control de calidad antes de la fusión.
@@ -186,7 +186,6 @@ GEMINI_API_KEY=tu-api-key-de-gemini
 1.  **Clonar el repositorio:**
     ```bash
     git clone https://github.com/SalasmartinD/ProyectoAranguri.git
-    cd concesionaria
     ```
 
 2.  **Instalar dependencias del proyecto:**
