@@ -116,7 +116,44 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 
 ---
 
-## 6. Guía de Instalación y Requisitos
+## 6. QA, Testing Unitario y DevOps (CI)
+
+Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de cambios críticos, implementamos una infraestructura moderna de pruebas unitarias e integración continua.
+
+### 🧪 Pruebas Unitarias con Vitest
+Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
+
+Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
+
+1. **Motor de Liquidación de Haberes** (`src/app/api/finanzas/liquidar-sueldo/liquidacion.test.ts`):
+   - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
+   - **Remuneración por Comisión**: Valida la aplicación estricta del porcentaje sobre el total de ventas.
+   - **Remuneración Mixta**: Comprueba el cálculo aditivo de básico + comisiones.
+   - **Resiliencia ante Límites**: Asegura que el sistema contenga de forma segura valores de ventas vacíos, en 0, negativos o de tipo `NaN`, retornando `$0` en comisiones en lugar de colapsar la transacción contable.
+
+2. **Motor de Filtros del Catálogo** (`src/core/utils/filters.test.ts`):
+   - **Parseo de Entrada**: Comprueba la conversión de strings a tipos numéricos para precios, kilómetros y años.
+   - **Fallbacks Seguros**: Valida que ante valores nulos, vacíos o incorrectos, el catálogo mantenga filtros por defecto en lugar de arrojar excepciones visuales.
+   - **Sanitización de Datos (Anti-inyección)**: Simula entradas maliciosas (ej: fragmentos de código SQL como `drop table vehiculos` o scripts maliciosos) y valida que el motor extraiga únicamente números legibles o aplique el fallback seguro, sanitizando la entrada antes de enviarla a Supabase.
+   - **Cotas de Control**: Evita la búsqueda de años o kilómetros fuera de rangos racionales.
+
+Para ejecutar los tests localmente:
+```bash
+npm run test
+```
+
+### 🛠️ Pipeline de Integración Continua (CI)
+Configuramos un pipeline automático mediante **GitHub Actions** (`.github/workflows/ci.yml`) que se dispara en cada `push` o `pull_request` a las ramas principales (`main`, `master`).
+
+El workflow de CI realiza los siguientes pasos en un runner limpio de `ubuntu-latest`:
+1. **Instalación Limpia**: Descarga las dependencias exactas utilizando `npm ci`.
+2. **Auditoría de Estilo (Linter)**: Ejecuta `npm run lint` para garantizar que no existan errores de TypeScript estricto o React (logrando 0 problemas en todo el proyecto).
+3. **Ejecución de Pruebas**: Corre la suite completa de Vitest para asegurar que no se hayan introducido regresiones en la lógica financiera o de filtrado.
+4. **Compilación de Producción**: Ejecuta `npm run build` para asegurar la compilación estática y dinámica exitosa del bundle de Next.js antes de habilitar el despliegue.
+
+---
+
+## 7. Guía de Instalación y Requisitos
 
 ### Requisitos Previos
 *   **Node.js**: Versión 18.0 o superior instalada.
