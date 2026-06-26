@@ -3,8 +3,38 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/core/services/supabase';
 import { Vehiculo } from '@/core/types/vehiculo';
-import { ArrowLeft, Calendar, Gauge, MessageSquare, ShieldCheck, AlertCircle, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, Calendar, Gauge, MessageSquare, ShieldCheck, AlertCircle, BadgeCheck, Car, Fuel, Sliders, Cpu } from 'lucide-react';
 import Link from 'next/link';
+
+const formatTipo = (t: string) => {
+  const map: Record<string, string> = {
+    SEDAN: 'Sedán',
+    SUV: 'SUV',
+    PICKUP: 'Pickup',
+    HATCHBACK: 'Hatchback',
+    COUPE: 'Coupé',
+    VAN: 'Van'
+  };
+  return map[t] || t;
+};
+
+const formatCombustible = (c: string) => {
+  const map: Record<string, string> = {
+    NAFTA: 'Nafta',
+    DIESEL: 'Diésel',
+    HIBRIDO: 'Híbrido',
+    ELECTRICO: 'Eléctrico'
+  };
+  return map[c] || c;
+};
+
+const formatTransmision = (t: string) => {
+  const map: Record<string, string> = {
+    MANUAL: 'Manual',
+    AUTOMATICA: 'Automática'
+  };
+  return map[t] || t;
+};
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -148,7 +178,7 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
             </div>
 
             {/* Características rápidas */}
-            <div className="flex gap-6 py-2">
+            <div className="flex flex-wrap gap-4 py-2">
               <div className="flex items-center gap-2 text-slate-600 text-sm bg-slate-100/60 rounded-xl px-3.5 py-2">
                 <Calendar className="h-4 w-4 text-indigo-600" />
                 <div>
@@ -163,6 +193,42 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
                   <span className="font-bold">{vehiculo.kilometros.toLocaleString('es-AR')} km</span>
                 </div>
               </div>
+              {vehiculo.tipo && (
+                <div className="flex items-center gap-2 text-slate-600 text-sm bg-slate-100/60 rounded-xl px-3.5 py-2">
+                  <Car className="h-4 w-4 text-indigo-600" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Tipo</span>
+                    <span className="font-bold">{formatTipo(vehiculo.tipo)}</span>
+                  </div>
+                </div>
+              )}
+              {vehiculo.combustible && (
+                <div className="flex items-center gap-2 text-slate-600 text-sm bg-slate-100/60 rounded-xl px-3.5 py-2">
+                  <Fuel className="h-4 w-4 text-indigo-600" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Combustible</span>
+                    <span className="font-bold">{formatCombustible(vehiculo.combustible)}</span>
+                  </div>
+                </div>
+              )}
+              {vehiculo.transmision && (
+                <div className="flex items-center gap-2 text-slate-600 text-sm bg-slate-100/60 rounded-xl px-3.5 py-2">
+                  <Sliders className="h-4 w-4 text-indigo-600" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Transmisión</span>
+                    <span className="font-bold">{formatTransmision(vehiculo.transmision)}</span>
+                  </div>
+                </div>
+              )}
+              {vehiculo.motorizacion && (
+                <div className="flex items-center gap-2 text-slate-600 text-sm bg-slate-100/60 rounded-xl px-3.5 py-2">
+                  <Cpu className="h-4 w-4 text-indigo-600" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Motorización</span>
+                    <span className="font-bold">{vehiculo.motorizacion}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Precio */}

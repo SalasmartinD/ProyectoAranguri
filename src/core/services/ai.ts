@@ -58,20 +58,36 @@ export async function generateChatResponse(history: Message[], systemInstruction
   return responseText;
 }
 
-/**
- * Optimiza y reformula un borrador informal/técnico a una descripción comercial premium.
- */
-export async function optimizeDescription(draft: string): Promise<string> {
-  const systemInstruction = `Adopta el rol de un redactor comercial automotriz de nivel premium. 
-Transforma el borrador ingresado en una descripción formal, concisa y atractiva para la venta.
+export async function optimizeDescription(params: {
+  draft: string;
+  marca: string;
+  modelo: string;
+  anio: number;
+  combustible?: string;
+  transmision?: string;
+  motorizacion?: string;
+}): Promise<string> {
+  const systemInstruction = `Actúa como una base de datos enciclopédica automotriz y redactor comercial premium de vehículos. 
+Tu tarea es generar una descripción de venta técnica, estructurada y comercialmente atractiva utilizando estos datos:
+- Marca: ${params.marca} | Modelo: ${params.modelo} | Año: ${params.anio}
+- Combustible: ${params.combustible || 'No especificado'} | Transmisión: ${params.transmision || 'No especificada'}
+- Motorización/Versión específica: ${params.motorizacion || 'No especificada'}
 
-Normas estrictas de redacción:
-1. No inventes bajo ninguna circunstancia equipamiento, historial de servicios (como cambios de distribución), kilometraje, años, procedencia o detalles estéticos (como golpes o rayones) que no estén explícitamente detallados en el texto original.
-2. Evita adornos poéticos exagerados, textos demasiado largos o introducciones vacías. Sé sobrio, preciso y elegante.
-3. Si el borrador es muy breve, la salida debe ser igualmente concisa y limitarse a redactar de manera formal y atractiva la información provista en un único párrafo corto o en unas pocas viñetas claras.
-4. Regla de oro: Responde únicamente con el texto reformulado final, sin prefacios, sin introducciones (prohibido decir "Aquí tienes la descripción:") y sin comillas.`;
+Estructura Obligatoria de Respuesta (Respeta este orden estricto):
+1. INTRODUCCIÓN COMERCIAL (Max 3 líneas): Una frase elegante que presente el vehículo y su relevancia en el mercado de forma atractiva.
+2. FICHA TÉCNICA DE FÁBRICA (Lista Markdown): Basándote firmemente en la 'Motorización' provista (ej: si dice 1.6 16v, busca ese motor exactamente), detalla:
+   - **Motorización:** (Ej: Motor 1.6L 16 válvulas, 2.0L TFSI, etc.).
+   - **Potencia y Rendimiento:** (Especificar los CV/HP reales de fábrica de ese motor específico).
+   - **Tracción y Transmisión:** (Detallar según el tipo de transmisión enviado).
+   - **Datos destacados:** (Consumo o prestaciones típicas de fábrica de forma breve).
+3. DETALLES DE LA UNIDAD (Formato Párrafo): Integra de manera orgánica y fluida las observaciones particulares o agregados del borrador del usuario: "${params.draft}". Si está vacío, omite esta sección.
+
+Reglas de Control de Calidad:
+- Está PROHIBIDO inventar datos de la unidad real (kilometraje, services, dueños, etc.) si no están en el borrador.
+- Si la 'motorizacion' especifica un bloque o versión, la ficha técnica DEBE basarse en ese motor estrictamente. No uses datos genéricos de otros motores del mismo modelo.
+- Responde ÚNICAMENTE con el texto en Markdown, sin saludos ni prefacios.`;
 
   const model = getGeminiModel(systemInstruction);
-  const result = await model.generateContent(draft);
+  const result = await model.generateContent(params.draft || "Generar ficha técnica comercial estándar.");
   return result.response.text().trim();
 }

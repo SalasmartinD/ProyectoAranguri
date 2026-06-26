@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useOperaciones } from '@/core/hooks/useOperaciones';
 import { useVehiculos } from '@/core/hooks/useVehiculos';
 import { useEmpleados } from '@/core/hooks/useEmpleados';
-import { VehiculoInput } from '@/core/types/vehiculo';
+import { VehiculoInput, TipoVehiculo, TipoCombustible, TipoTransmision } from '@/core/types/vehiculo';
 import { 
   ArrowUpRight, 
   ArrowDownLeft, 
@@ -33,19 +33,23 @@ export default function OperacionesPage() {
 
   // Formulario Venta
   const [selectedVehiculoId, setSelectedVehiculoId] = useState('');
-  const [montoVenta, setMontoVenta] = useState<number>(0);
+  const [montoVenta, setMontoVenta] = useState<number | ''>('');
 
   // Formulario Compra (Alta de Auto)
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
-  const [anio, setAnio] = useState<number>(new Date().getFullYear());
-  const [precioCompra, setPrecioCompra] = useState<number>(0);
-  const [precioVenta, setPrecioVenta] = useState<number>(0);
-  const [kilometros, setKilometros] = useState<number>(0);
+  const [anio, setAnio] = useState<number | ''>(new Date().getFullYear());
+  const [precioCompra, setPrecioCompra] = useState<number | ''>('');
+  const [precioVenta, setPrecioVenta] = useState<number | ''>('');
+  const [kilometros, setKilometros] = useState<number | ''>('');
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tipo, setTipo] = useState<TipoVehiculo | ''>('');
+  const [combustible, setCombustible] = useState<TipoCombustible | ''>('');
+  const [transmision, setTransmision] = useState<TipoTransmision | ''>('');
+  const [motorizacion, setMotorizacion] = useState('');
 
   useEffect(() => {
     fetchTransacciones();
@@ -59,7 +63,7 @@ export default function OperacionesPage() {
     setSuccessMsg(null);
     setErrorMsg(null);
 
-    if (!selectedVehiculoId || !selectedEmpleadoId || montoVenta <= 0) {
+    if (!selectedVehiculoId || !selectedEmpleadoId || !montoVenta || Number(montoVenta) <= 0) {
       setErrorMsg('Por favor completa todos los campos con montos válidos.');
       return;
     }
@@ -69,7 +73,7 @@ export default function OperacionesPage() {
       setSuccessMsg('Venta registrada con éxito. El vehículo cambió de estado a "Vendido" automáticamente.');
       setSelectedVehiculoId('');
       setSelectedEmpleadoId('');
-      setMontoVenta(0);
+      setMontoVenta('');
       fetchVehiculos(true); // Refrescar lista de vehículos disponibles
     } else {
       setErrorMsg('Error al registrar la transacción de venta.');
@@ -84,7 +88,7 @@ export default function OperacionesPage() {
     setIsSubmitting(true);
     setUploadProgress(null);
 
-    if (!selectedEmpleadoId || !marca || !modelo || precioCompra <= 0 || precioVenta <= 0 || kilometros < 0) {
+    if (!selectedEmpleadoId || !marca || !modelo || !precioCompra || !precioVenta || kilometros === '') {
       setErrorMsg('Por favor completa todos los campos del vehículo y selecciona un empleado.');
       setIsSubmitting(false);
       return;
@@ -126,12 +130,16 @@ export default function OperacionesPage() {
         id: targetId,
         marca,
         modelo,
-        anio: Number(anio),
-        precio_compra: Number(precioCompra),
-        precio_venta: Number(precioVenta),
-        kilometros: Number(kilometros),
+        anio: Number(anio || 0),
+        precio_compra: Number(precioCompra || 0),
+        precio_venta: Number(precioVenta || 0),
+        kilometros: Number(kilometros || 0),
         estado: 'Disponible',
         imagenes: finalImagenes,
+        tipo: tipo || null,
+        combustible: combustible || null,
+        transmision: transmision || null,
+        motorizacion: motorizacion.trim() || null,
       };
 
       const ok = await registrarCompra(nuevoVehiculo, selectedEmpleadoId);
@@ -140,11 +148,15 @@ export default function OperacionesPage() {
         setMarca('');
         setModelo('');
         setAnio(new Date().getFullYear());
-        setPrecioCompra(0);
-        setPrecioVenta(0);
-        setKilometros(0);
+        setPrecioCompra('');
+        setPrecioVenta('');
+        setKilometros('');
         setExistingImages([]);
         setSelectedFiles([]);
+        setTipo('');
+        setCombustible('');
+        setTransmision('');
+        setMotorizacion('');
         setSelectedEmpleadoId('');
         fetchVehiculos(true); // Refrescar lista de vehículos disponibles
       } else {
@@ -273,8 +285,8 @@ export default function OperacionesPage() {
                       required
                       min="1"
                       value={montoVenta}
-                      onChange={(e) => setMontoVenta(Number(e.target.value))}
-                      className="w-full rounded-xl border border-slate-200 pl-10 pr-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                      onChange={(e) => setMontoVenta(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 pl-10 pr-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -342,8 +354,8 @@ export default function OperacionesPage() {
                       type="number"
                       required
                       value={anio}
-                      onChange={(e) => setAnio(Number(e.target.value))}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                      onChange={(e) => setAnio(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="space-y-1">
@@ -352,7 +364,65 @@ export default function OperacionesPage() {
                       type="number"
                       required
                       value={kilometros}
-                      onChange={(e) => setKilometros(Number(e.target.value))}
+                      onChange={(e) => setKilometros(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">Tipo de Vehículo</label>
+                    <select
+                      value={tipo}
+                      onChange={(e) => setTipo(e.target.value as TipoVehiculo | '')}
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      <option value="SEDAN">Sedán</option>
+                      <option value="SUV">SUV</option>
+                      <option value="PICKUP">Pickup</option>
+                      <option value="HATCHBACK">Hatchback</option>
+                      <option value="COUPE">Coupé</option>
+                      <option value="VAN">Van</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">Combustible</label>
+                    <select
+                      value={combustible}
+                      onChange={(e) => setCombustible(e.target.value as TipoCombustible | '')}
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      <option value="NAFTA">Nafta</option>
+                      <option value="DIESEL">Diésel</option>
+                      <option value="HIBRIDO">Híbrido</option>
+                      <option value="ELECTRICO">Eléctrico</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">Transmisión</label>
+                    <select
+                      value={transmision}
+                      onChange={(e) => setTransmision(e.target.value as TipoTransmision | '')}
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 bg-white"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      <option value="MANUAL">Manual</option>
+                      <option value="AUTOMATICA">Automática</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">Motorización</label>
+                    <input
+                      type="text"
+                      value={motorizacion}
+                      onChange={(e) => setMotorizacion(e.target.value)}
+                      placeholder="Ej: 1.4 TSI, 2.0 TDI"
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -365,8 +435,8 @@ export default function OperacionesPage() {
                       type="number"
                       required
                       value={precioCompra}
-                      onChange={(e) => setPrecioCompra(Number(e.target.value))}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                      onChange={(e) => setPrecioCompra(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="space-y-1">
@@ -375,8 +445,8 @@ export default function OperacionesPage() {
                       type="number"
                       required
                       value={precioVenta}
-                      onChange={(e) => setPrecioVenta(Number(e.target.value))}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500"
+                      onChange={(e) => setPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>

@@ -3,8 +3,30 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useVehiculos } from '@/core/hooks/useVehiculos';
-import { Search, SlidersHorizontal, Calendar, Gauge, MessageCircle, AlertCircle } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, Gauge, MessageCircle, AlertCircle, Car, Fuel } from 'lucide-react';
 import Image from 'next/image';
+
+const formatTipo = (t: string) => {
+  const map: Record<string, string> = {
+    SEDAN: 'Sedán',
+    SUV: 'SUV',
+    PICKUP: 'Pickup',
+    HATCHBACK: 'Hatchback',
+    COUPE: 'Coupé',
+    VAN: 'Van'
+  };
+  return map[t] || t;
+};
+
+const formatCombustible = (c: string) => {
+  const map: Record<string, string> = {
+    NAFTA: 'Nafta',
+    DIESEL: 'Diésel',
+    HIBRIDO: 'Híbrido',
+    ELECTRICO: 'Eléctrico'
+  };
+  return map[c] || c;
+};
 
 export default function CatalogoPage() {
   const { vehiculos, loading, error, fetchVehiculos } = useVehiculos();
@@ -12,8 +34,12 @@ export default function CatalogoPage() {
   // Estados para los filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarca, setSelectedMarca] = useState('');
+  const [minPrecio, setMinPrecio] = useState<number | ''>('');
   const [maxPrecio, setMaxPrecio] = useState<number | ''>('');
   const [minAnio, setMinAnio] = useState<number | ''>('');
+  const [maxAnio, setMaxAnio] = useState<number | ''>('');
+  const [selectedTipo, setSelectedTipo] = useState('');
+  const [selectedCombustible, setSelectedCombustible] = useState('');
 
   useEffect(() => {
     // Buscar solo los vehículos con estado 'Disponible'
@@ -34,12 +60,16 @@ export default function CatalogoPage() {
         v.modelo.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchMarca = selectedMarca ? v.marca === selectedMarca : true;
-      const matchPrecio = maxPrecio ? v.precio_venta <= maxPrecio : true;
-      const matchAnio = minAnio ? v.anio >= minAnio : true;
+      const matchMinPrecio = minPrecio ? v.precio_venta >= minPrecio : true;
+      const matchMaxPrecio = maxPrecio ? v.precio_venta <= maxPrecio : true;
+      const matchMinAnio = minAnio ? v.anio >= minAnio : true;
+      const matchMaxAnio = maxAnio ? v.anio <= maxAnio : true;
+      const matchTipo = selectedTipo ? v.tipo === selectedTipo : true;
+      const matchCombustible = selectedCombustible ? v.combustible === selectedCombustible : true;
 
-      return matchSearch && matchMarca && matchPrecio && matchAnio;
+      return matchSearch && matchMarca && matchMinPrecio && matchMaxPrecio && matchMinAnio && matchMaxAnio && matchTipo && matchCombustible;
     });
-  }, [vehiculos, searchTerm, selectedMarca, maxPrecio, minAnio]);
+  }, [vehiculos, searchTerm, selectedMarca, minPrecio, maxPrecio, minAnio, maxAnio, selectedTipo, selectedCombustible]);
 
   return (
     <div className="space-y-8 py-4">
@@ -93,27 +123,85 @@ export default function CatalogoPage() {
             </select>
           </div>
 
-          {/* Filtro Precio Máximo */}
+          {/* Filtro Tipo (Chasis) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 block">Precio Máximo</label>
+            <label className="text-xs font-semibold text-slate-500 block">Tipo (Chasis)</label>
+            <select
+              value={selectedTipo}
+              onChange={(e) => setSelectedTipo(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
+            >
+              <option value="">Todos los tipos</option>
+              <option value="SEDAN">Sedán</option>
+              <option value="SUV">SUV</option>
+              <option value="PICKUP">Pickup</option>
+              <option value="HATCHBACK">Hatchback</option>
+              <option value="COUPE">Coupé</option>
+              <option value="VAN">Van</option>
+            </select>
+          </div>
+
+          {/* Filtro Combustible */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 block">Combustible</label>
+            <select
+              value={selectedCombustible}
+              onChange={(e) => setSelectedCombustible(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
+            >
+              <option value="">Todos los combustibles</option>
+              <option value="NAFTA">Nafta</option>
+              <option value="DIESEL">Diésel</option>
+              <option value="HIBRIDO">Híbrido</option>
+              <option value="ELECTRICO">Eléctrico</option>
+            </select>
+          </div>
+
+          {/* Rango Precio Desde */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 block">Precio Desde ($)</label>
             <input
               type="number"
-              placeholder="Ej: 15000"
+              placeholder="Ej: 5000000"
+              value={minPrecio}
+              onChange={(e) => setMinPrecio(e.target.value ? Number(e.target.value) : '')}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+
+          {/* Filtro Precio Máximo */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 block">Precio Hasta ($)</label>
+            <input
+              type="number"
+              placeholder="Ej: 15000000"
               value={maxPrecio}
               onChange={(e) => setMaxPrecio(e.target.value ? Number(e.target.value) : '')}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
 
           {/* Filtro Año Mínimo */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 block">Año Mínimo</label>
+            <label className="text-xs font-semibold text-slate-500 block">Año Desde</label>
             <input
               type="number"
-              placeholder="Ej: 2018"
+              placeholder="Ej: 2010"
               value={minAnio}
               onChange={(e) => setMinAnio(e.target.value ? Number(e.target.value) : '')}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+
+          {/* Filtro Año Máximo */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 block">Año Hasta</label>
+            <input
+              type="number"
+              placeholder="Ej: 2015"
+              value={maxAnio}
+              onChange={(e) => setMaxAnio(e.target.value ? Number(e.target.value) : '')}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </div>
@@ -146,8 +234,12 @@ export default function CatalogoPage() {
             onClick={() => {
               setSearchTerm('');
               setSelectedMarca('');
+              setMinPrecio('');
               setMaxPrecio('');
               setMinAnio('');
+              setMaxAnio('');
+              setSelectedTipo('');
+              setSelectedCombustible('');
             }}
             className="text-xs text-indigo-600 font-bold hover:underline"
           >
@@ -189,15 +281,27 @@ export default function CatalogoPage() {
                   {v.marca} {v.modelo}
                 </h3>
 
-                <div className="flex items-center gap-4 text-slate-500 text-xs mb-4">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-slate-500 text-xs mb-4">
                   <div className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
                     <span>{v.anio}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Gauge className="h-3.5 w-3.5" />
+                    <Gauge className="h-3.5 w-3.5 text-slate-400" />
                     <span>{v.kilometros.toLocaleString('es-AR')} km</span>
                   </div>
+                  {v.tipo && (
+                    <div className="flex items-center gap-1">
+                      <Car className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{formatTipo(v.tipo)}</span>
+                    </div>
+                  )}
+                  {v.combustible && (
+                    <div className="flex items-center gap-1">
+                      <Fuel className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{formatCombustible(v.combustible)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">

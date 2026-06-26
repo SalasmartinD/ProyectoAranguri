@@ -18,21 +18,21 @@ export default async function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e1b4b,transparent)] opacity-65" />
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
-        
+
         <div className="relative mx-auto max-w-3xl text-center flex flex-col items-center gap-6">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300 ring-1 ring-inset ring-indigo-500/20">
             <Sparkles className="h-3.5 w-3.5" />
             Asistente con Inteligencia Artificial Activo
           </div>
-          
+
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent leading-none">
             Encuentra tu próximo vehículo ideal
           </h1>
-          
+
           <p className="max-w-xl text-base text-slate-300 leading-relaxed">
             Explora nuestro catálogo seleccionado en <strong>AutomotoresSalas</strong>. Usa nuestro asesor virtual inteligente para consultar stock disponible al instante.
           </p>
-          
+
           <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/catalogo"
@@ -41,9 +41,9 @@ export default async function LandingPage() {
               Ver Catálogo Completo
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
-            
+
             <a
-              href="https://wa.me/5491122334455?text=Hola!%20Quiero%20consultar%20por%20un%20vehículo%20en%20AutomotoresSalas."
+              href="https://wa.me/5491127646848?text=Hola!%20Quiero%20consultar%20por%20un%20vehículo%20en%20AutomotoresSalas."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-6 py-3.5 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
@@ -136,7 +136,7 @@ export default async function LandingPage() {
           </div>
           <h3 className="text-lg font-bold text-slate-900 mb-2">Asistente IA 24/7</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Pregúntale a nuestro chat virtual sobre marcas, precios, kilómetros y recibe recomendaciones al instante con lenguaje natural.
+            Preguntale a nuestro chat virtual sobre marcas, precios, kilómetros y recibí recomendaciones al instante.
           </p>
         </div>
 
@@ -164,9 +164,9 @@ export default async function LandingPage() {
       {/* CTA Section */}
       <section className="flex flex-col md:flex-row items-center justify-between gap-8 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-8 md:p-12">
         <div className="space-y-2 max-w-xl">
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">¿Listo para cambiar tu vehículo?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">¿Estas listo para cambiar tu vehículo?</h2>
           <p className="text-slate-600 leading-relaxed">
-            Ponte en contacto con nuestro equipo de profesionales en AutomotoresSalas. Tasamos tu usado en el acto y ofrecemos planes de financiación a tu medida.
+            Ponete en contacto con nuestro equipo de profesionales en AutomotoresSalas. Tasamos tu usado en el acto y ofrecemos planes de financiación a tu medida.
           </p>
         </div>
         <a

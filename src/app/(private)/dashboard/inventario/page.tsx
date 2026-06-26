@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useVehiculos } from '@/core/hooks/useVehiculos';
-import { Vehiculo, VehiculoEstado } from '@/core/types/vehiculo';
+import { Vehiculo, VehiculoEstado, TipoVehiculo, TipoCombustible, TipoTransmision } from '@/core/types/vehiculo';
 import { 
   Plus, 
   Edit, 
@@ -29,10 +29,10 @@ export default function InventarioPage() {
   // Campos del formulario
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
-  const [anio, setAnio] = useState<number>(new Date().getFullYear());
-  const [precioCompra, setPrecioCompra] = useState<number>(0);
-  const [precioVenta, setPrecioVenta] = useState<number>(0);
-  const [kilometros, setKilometros] = useState<number>(0);
+  const [anio, setAnio] = useState<number | ''>(new Date().getFullYear());
+  const [precioCompra, setPrecioCompra] = useState<number | ''>('');
+  const [precioVenta, setPrecioVenta] = useState<number | ''>('');
+  const [kilometros, setKilometros] = useState<number | ''>('');
   const [estado, setEstado] = useState<VehiculoEstado>('Disponible');
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -41,6 +41,10 @@ export default function InventarioPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [tipo, setTipo] = useState<TipoVehiculo | ''>('');
+  const [combustible, setCombustible] = useState<TipoCombustible | ''>('');
+  const [transmision, setTransmision] = useState<TipoTransmision | ''>('');
+  const [motorizacion, setMotorizacion] = useState('');
 
   // Mensajes de éxito locales
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -63,15 +67,19 @@ export default function InventarioPage() {
     setMarca('');
     setModelo('');
     setAnio(new Date().getFullYear());
-    setPrecioCompra(0);
-    setPrecioVenta(0);
-    setKilometros(0);
+    setPrecioCompra('');
+    setPrecioVenta('');
+    setKilometros('');
     setEstado('Disponible');
     setExistingImages([]);
     setSelectedFiles([]);
     setUploadProgress(null);
     setFormError(null);
     setDescripcion('');
+    setTipo('');
+    setCombustible('');
+    setTransmision('');
+    setMotorizacion('');
     setIsFormOpen(true);
   };
 
@@ -90,6 +98,10 @@ export default function InventarioPage() {
     setUploadProgress(null);
     setFormError(null);
     setDescripcion(v.descripcion || '');
+    setTipo(v.tipo || '');
+    setCombustible(v.combustible || '');
+    setTransmision(v.transmision || '');
+    setMotorizacion(v.motorizacion || '');
     setIsFormOpen(true);
   };
 
@@ -136,13 +148,17 @@ export default function InventarioPage() {
       const inputData = {
         marca,
         modelo,
-        anio: Number(anio),
-        precio_compra: Number(precioCompra),
-        precio_venta: Number(precioVenta),
-        kilometros: Number(kilometros),
+        anio: Number(anio || 0),
+        precio_compra: Number(precioCompra || 0),
+        precio_venta: Number(precioVenta || 0),
+        kilometros: Number(kilometros || 0),
         estado,
         imagenes: finalImagenes,
         descripcion: descripcion.trim() || null,
+        tipo: tipo || null,
+        combustible: combustible || null,
+        transmision: transmision || null,
+        motorizacion: motorizacion.trim() || null,
       };
 
       if (editingId) {
@@ -381,8 +397,8 @@ export default function InventarioPage() {
                     min="1900"
                     max={new Date().getFullYear() + 1}
                     value={anio}
-                    onChange={(e) => setAnio(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
+                    onChange={(e) => setAnio(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -392,8 +408,8 @@ export default function InventarioPage() {
                     required
                     min="0"
                     value={kilometros}
-                    onChange={(e) => setKilometros(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
+                    onChange={(e) => setKilometros(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>
@@ -406,8 +422,8 @@ export default function InventarioPage() {
                     required
                     min="0"
                     value={precioCompra}
-                    onChange={(e) => setPrecioCompra(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
+                    onChange={(e) => setPrecioCompra(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -417,7 +433,65 @@ export default function InventarioPage() {
                     required
                     min="0"
                     value={precioVenta}
-                    onChange={(e) => setPrecioVenta(Number(e.target.value))}
+                    onChange={(e) => setPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Tipo de Vehículo</label>
+                  <select
+                    value={tipo}
+                    onChange={(e) => setTipo(e.target.value as TipoVehiculo | '')}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 bg-white"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    <option value="SEDAN">Sedán</option>
+                    <option value="SUV">SUV</option>
+                    <option value="PICKUP">Pickup</option>
+                    <option value="HATCHBACK">Hatchback</option>
+                    <option value="COUPE">Coupé</option>
+                    <option value="VAN">Van</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Combustible</label>
+                  <select
+                    value={combustible}
+                    onChange={(e) => setCombustible(e.target.value as TipoCombustible | '')}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 bg-white"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    <option value="NAFTA">Nafta</option>
+                    <option value="DIESEL">Diésel</option>
+                    <option value="HIBRIDO">Híbrido</option>
+                    <option value="ELECTRICO">Eléctrico</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Transmisión</label>
+                  <select
+                    value={transmision}
+                    onChange={(e) => setTransmision(e.target.value as TipoTransmision | '')}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100 bg-white"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    <option value="MANUAL">Manual</option>
+                    <option value="AUTOMATICA">Automática</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500">Motorización</label>
+                  <input
+                    type="text"
+                    value={motorizacion}
+                    onChange={(e) => setMotorizacion(e.target.value)}
+                    placeholder="Ej: 1.4 TSI, 2.0 TDI"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
                   />
                 </div>
@@ -443,7 +517,7 @@ export default function InventarioPage() {
                   <label className="text-xs font-semibold text-slate-500 font-sans">Descripción del Vehículo (Opcional)</label>
                   <button
                     type="button"
-                    disabled={!descripcion.trim() || isOptimizing}
+                    disabled={!marca.trim() || !modelo.trim() || !anio || isOptimizing}
                     onClick={async () => {
                       setIsOptimizing(true);
                       setFormError(null);
@@ -453,7 +527,15 @@ export default function InventarioPage() {
                           headers: {
                             'Content-Type': 'application/json',
                           },
-                          body: JSON.stringify({ draft: descripcion }),
+                          body: JSON.stringify({ 
+                            borrador: descripcion,
+                            marca,
+                            modelo,
+                            anio,
+                            combustible: combustible || undefined,
+                            transmision: transmision || undefined,
+                            motorizacion: motorizacion.trim() || undefined
+                          }),
                         });
                         const data = await response.json();
                         
