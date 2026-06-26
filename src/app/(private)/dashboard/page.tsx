@@ -21,6 +21,16 @@ interface DashboardStats {
   gananciaMes: number;
 }
 
+interface RecentTransaccion {
+  id: string;
+  tipo: 'Compra' | 'Venta';
+  monto: number;
+  ganancia_neta?: number | null;
+  fecha: string;
+  vehiculo: { marca: string; modelo: string }[] | { marca: string; modelo: string } | null;
+  empleado: { nombre: string }[] | { nombre: string } | null;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     autosDisponibles: 0,
@@ -29,7 +39,7 @@ export default function DashboardPage() {
     montoVentasMes: 0,
     gananciaMes: 0,
   });
-  const [recentTransacciones, setRecentTransacciones] = useState<any[]>([]);
+  const [recentTransacciones, setRecentTransacciones] = useState<RecentTransaccion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +102,7 @@ export default function DashboardPage() {
         if (ultimasTxErr) throw ultimasTxErr;
         setRecentTransacciones(ultimasTx || []);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading dashboard stats:', err);
         setError('Error al calcular las métricas del panel principal.');
       } finally {
@@ -210,39 +220,43 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {recentTransacciones.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{new Date(tx.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 font-bold ${
-                          tx.tipo === 'Compra'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                        }`}
-                      >
-                        {tx.tipo}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-900">
-                      {tx.vehiculo ? `${tx.vehiculo.marca} ${tx.vehiculo.modelo}` : 'Vehículo Eliminado'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {tx.empleado?.nombre || 'Desconocido'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-extrabold text-slate-900">
-                      ${Number(tx.monto).toLocaleString('es-AR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-emerald-600">
-                      {tx.tipo === 'Venta' ? `$${Number(tx.ganancia_neta).toLocaleString('es-AR')}` : '-'}
-                    </td>
-                  </tr>
-                ))}
+                {recentTransacciones.map((tx) => {
+                  const veh = Array.isArray(tx.vehiculo) ? tx.vehiculo[0] : tx.vehiculo;
+                  const emp = Array.isArray(tx.empleado) ? tx.empleado[0] : tx.empleado;
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50/50">
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{new Date(tx.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2.5 py-0.5 font-bold ${
+                            tx.tipo === 'Compra'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          }`}
+                        >
+                          {tx.tipo}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-900">
+                        {veh ? `${veh.marca} ${veh.modelo}` : 'Vehículo Eliminado'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {emp?.nombre || 'Desconocido'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap font-extrabold text-slate-900">
+                        ${Number(tx.monto).toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-emerald-600">
+                        {tx.tipo === 'Venta' ? `$${Number(tx.ganancia_neta).toLocaleString('es-AR')}` : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

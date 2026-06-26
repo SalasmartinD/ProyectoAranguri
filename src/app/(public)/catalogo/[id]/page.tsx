@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/core/services/supabase';
 import { Vehiculo } from '@/core/types/vehiculo';
 import { ArrowLeft, Calendar, Gauge, MessageSquare, ShieldCheck, AlertCircle, BadgeCheck, Car, Fuel, Sliders, Cpu } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
 
         if (dbError) throw dbError;
         setVehiculo(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching vehiculo detail:', err);
         setError('No se pudo encontrar la información de este vehículo.');
       } finally {
@@ -131,12 +132,14 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
       <div className="grid gap-8 md:grid-cols-2">
         {/* Galería / Imagen */}
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm aspect-video md:aspect-auto md:h-[360px]">
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm aspect-video md:aspect-auto md:h-[360px]">
             {vehiculo.imagenes && vehiculo.imagenes.length > 0 ? (
-              <img
+              <Image
                 src={vehiculo.imagenes[activeImgIndex]}
                 alt={`${vehiculo.marca} ${vehiculo.modelo}`}
-                className="h-full w-full object-cover transition-all duration-300 animate-in fade-in"
+                fill
+                priority
+                className="object-cover transition-all duration-300 animate-in fade-in"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-400 text-sm font-semibold bg-gradient-to-br from-slate-50 to-slate-100">
@@ -158,7 +161,7 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
                       : 'border-transparent opacity-60 hover:opacity-100 hover:scale-101'
                   }`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <Image src={img} alt={`${vehiculo.marca} ${vehiculo.modelo} miniatura ${idx + 1}`} fill className="object-cover" />
                 </button>
               ))}
             </div>

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useVehiculos } from '@/core/hooks/useVehiculos';
-import { Search, SlidersHorizontal, Calendar, Gauge, MessageCircle, AlertCircle, Car, Fuel } from 'lucide-react';
-import Image from 'next/image';
+import { Search, SlidersHorizontal, Calendar, Gauge, AlertCircle, Car, Fuel } from 'lucide-react';
 
 const formatTipo = (t: string) => {
   const map: Record<string, string> = {
@@ -257,10 +257,11 @@ export default function CatalogoPage() {
               {/* Imagen del vehículo */}
               <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                 {v.imagenes && v.imagenes.length > 0 ? (
-                  <img
+                  <Image
                     src={v.imagenes[0]}
                     alt={`${v.marca} ${v.modelo}`}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-slate-400 text-xs font-semibold bg-gradient-to-br from-slate-50 to-slate-100">

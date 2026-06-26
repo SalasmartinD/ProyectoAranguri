@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Image from 'next/image';
 import { UploadCloud, X } from 'lucide-react';
 
 interface ImageUploaderProps {
@@ -126,10 +127,11 @@ export function ImageUploader({
               key={`existing-${idx}`}
               className="group relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm"
             >
-              <img
+              <Image
                 src={url}
-                alt="Existente"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                alt="Imagen guardada del vehículo"
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <span className="absolute bottom-1 left-1 rounded bg-slate-900/60 px-1 py-0.5 text-[8px] font-semibold text-white uppercase tracking-wider backdrop-blur-xs">
                 Guardada
@@ -156,14 +158,12 @@ export function ImageUploader({
                 key={`selected-${idx}`}
                 className="group relative aspect-video rounded-xl overflow-hidden border border-indigo-200 bg-indigo-50/20 shadow-sm"
               >
-                <img
+                <Image
                   src={objectUrl}
                   alt={file.name}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  onLoad={() => {
-                    // Revoke object URL after loading to free memory
-                    // We can just let it render, but it's fine.
-                  }}
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 <span className="absolute bottom-1 left-1 rounded bg-indigo-600/80 px-1 py-0.5 text-[8px] font-semibold text-white uppercase tracking-wider backdrop-blur-xs">
                   Nueva

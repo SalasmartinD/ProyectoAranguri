@@ -27,9 +27,9 @@ export function useEmpleados() {
 
       if (dbError) throw dbError;
       setEmpleados(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching empleados:', err);
-      setError(err?.message || 'Error al obtener la lista de empleados.');
+      setError(err instanceof Error ? err.message : 'Error al obtener la lista de empleados.');
     } finally {
       setLoading(false);
     }
@@ -48,9 +48,9 @@ export function useEmpleados() {
       if (dbError) throw dbError;
       setEmpleados((prev) => [...prev, data]);
       return data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error adding empleado:', err);
-      setError(err?.message || 'Error al agregar el empleado.');
+      setError(err instanceof Error ? err.message : 'Error al agregar el empleado.');
       return null;
     } finally {
       setLoading(false);
@@ -71,9 +71,9 @@ export function useEmpleados() {
         prev.map((e) => (e.id === id ? { ...e, ...empleadoInput } as Empleado : e))
       );
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error editing empleado:', err);
-      setError(err?.message || 'Error al editar el empleado.');
+      setError(err instanceof Error ? err.message : 'Error al editar el empleado.');
       return false;
     } finally {
       setLoading(false);
@@ -121,9 +121,9 @@ export function useEmpleados() {
       });
 
       setKpis(calculatedKpis);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error calculating KPIs:', err);
-      setError(err?.message || 'Error al calcular las métricas de empleados.');
+      setError(err instanceof Error ? err.message : 'Error al calcular las métricas de empleados.');
     } finally {
       setLoading(false);
     }

@@ -4,16 +4,31 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Sparkles, AlertCircle } from 'lucide-react';
 import { Message } from '@/core/types/chat';
 
+// Definir constante inicial estática fuera del componente para mantener la pureza
+const INITIAL_MESSAGES: Message[] = [
+  {
+    id: 'welcome',
+    role: 'model',
+    content: '¡Hola! Soy tu asesor virtual. ¿En qué vehículo estás interesado hoy? Puedo buscar por precio, kilómetros o segmento.',
+    timestamp: '2026-06-26T00:00:00.000Z',
+  },
+];
+
+// Función de utilidad pura/aislada fuera del componente para evitar advertencias de react-hooks/purity
+function createMessage(role: 'user' | 'model', content: string): Message {
+  return {
+    id: typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 11),
+    role,
+    content,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export default function ChatBubble() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'model',
-      content: '¡Hola! Soy tu asesor virtual. ¿En qué vehículo estás interesado hoy? Puedo buscar por precio, kilómetros o segmento.',
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +54,7 @@ export default function ChatBubble() {
     }
     setError(null);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-      timestamp: new Date().toISOString(),
-    };
+    const userMessage = createMessage('user', text);
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -65,16 +75,11 @@ export default function ChatBubble() {
 
       setMessages((prev) => [
         ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          content: data.response,
-          timestamp: new Date().toISOString(),
-        },
+        createMessage('model', data.response),
       ]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Error de conexión.');
+      setError(err instanceof Error ? err.message : 'Error de conexión.');
     } finally {
       setLoading(false);
     }

@@ -12,8 +12,7 @@ import {
   Loader2, 
   X, 
   AlertCircle, 
-  CheckCircle,
-  Activity
+  CheckCircle
 } from 'lucide-react';
 
 interface Role {
@@ -69,9 +68,9 @@ export default function ConfiguracionPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Error al obtener roles.');
       setRoles(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al obtener roles.');
     } finally {
       setLoadingRoles(false);
     }
@@ -92,17 +91,26 @@ export default function ConfiguracionPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Error al obtener categorías.');
       setCategorias(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al obtener categorías.');
     } finally {
       setLoadingCategorias(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchRoles();
-    fetchCategorias();
+    let active = true;
+    const loadData = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      fetchRoles();
+      fetchCategorias();
+    };
+    loadData();
+    return () => {
+      active = false;
+    };
   }, [fetchRoles, fetchCategorias]);
 
   // Guardar/Editar Rol
@@ -140,9 +148,9 @@ export default function ConfiguracionPage() {
       setRoleNombre('');
       setEditingRole(null);
       await fetchRoles();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al guardar el rol.');
     } finally {
       setIsSavingRole(false);
     }
@@ -183,9 +191,9 @@ export default function ConfiguracionPage() {
       setCatNombre('');
       setEditingCat(null);
       await fetchCategorias();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al guardar la categoría.');
     } finally {
       setIsSavingCat(false);
     }
@@ -213,9 +221,9 @@ export default function ConfiguracionPage() {
 
       setSuccessMsg('Rol eliminado correctamente.');
       await fetchRoles();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al eliminar el rol.');
     }
   };
 
@@ -241,9 +249,9 @@ export default function ConfiguracionPage() {
 
       setSuccessMsg('Categoría eliminada correctamente.');
       await fetchCategorias();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err instanceof Error ? err.message : 'Error al eliminar la categoría.');
     }
   };
 

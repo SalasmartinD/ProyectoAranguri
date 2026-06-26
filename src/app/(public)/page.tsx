@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Star, ShieldCheck, Sparkles, MessageSquare, Calendar, Gauge } from 'lucide-react';
 import { supabase } from '@/core/services/supabase';
 
@@ -77,10 +78,11 @@ export default async function LandingPage() {
                 {/* Imagen */}
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                   {v.imagenes && v.imagenes.length > 0 ? (
-                    <img
+                    <Image
                       src={v.imagenes[0]}
                       alt={`${v.marca} ${v.modelo}`}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-slate-400 text-xs font-semibold bg-gradient-to-br from-slate-50 to-slate-100">

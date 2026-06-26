@@ -39,10 +39,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (error) throw error;
 
     return NextResponse.json({ success: true, role: data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating role:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al actualizar el rol.' },
+      { error: error instanceof Error ? error.message : 'Error al actualizar el rol.' },
       { status: 500 }
     );
   }
@@ -76,10 +76,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (deleteErr) throw deleteErr;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting role:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al eliminar el rol.' },
+      { error: error instanceof Error ? error.message : 'Error al eliminar el rol.' },
       { status: 500 }
     );
   }

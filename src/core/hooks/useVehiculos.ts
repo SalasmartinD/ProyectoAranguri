@@ -24,9 +24,9 @@ export function useVehiculos() {
 
       if (dbError) throw dbError;
       setVehiculos(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching vehiculos:', err);
-      setError(err?.message || 'Error al obtener los vehículos.');
+      setError(err instanceof Error ? err.message : 'Error al obtener los vehículos.');
     } finally {
       setLoading(false);
     }
@@ -46,9 +46,9 @@ export function useVehiculos() {
       
       setVehiculos((prev) => [data, ...prev]);
       return data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error inserting vehiculo:', err);
-      setError(err?.message || 'Error al agregar el vehículo.');
+      setError(err instanceof Error ? err.message : 'Error al agregar el vehículo.');
       return null;
     } finally {
       setLoading(false);
@@ -70,9 +70,9 @@ export function useVehiculos() {
         prev.map((v) => (v.id === id ? { ...v, ...vehiculoInput } as Vehiculo : v))
       );
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating vehiculo:', err);
-      setError(err?.message || 'Error al actualizar el vehículo.');
+      setError(err instanceof Error ? err.message : 'Error al actualizar el vehículo.');
       return false;
     } finally {
       setLoading(false);
@@ -92,9 +92,9 @@ export function useVehiculos() {
 
       setVehiculos((prev) => prev.filter((v) => v.id !== id));
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting vehiculo:', err);
-      setError(err?.message || 'Error al eliminar el vehículo.');
+      setError(err instanceof Error ? err.message : 'Error al eliminar el vehículo.');
       return false;
     } finally {
       setLoading(false);

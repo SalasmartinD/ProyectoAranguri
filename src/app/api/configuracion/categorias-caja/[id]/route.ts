@@ -41,10 +41,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (error) throw error;
 
     return NextResponse.json({ success: true, categoria: data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating category:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al actualizar la categoría.' },
+      { error: error instanceof Error ? error.message : 'Error al actualizar la categoría.' },
       { status: 500 }
     );
   }
@@ -78,10 +78,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (deleteErr) throw deleteErr;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting category:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al eliminar la categoría.' },
+      { error: error instanceof Error ? error.message : 'Error al eliminar la categoría.' },
       { status: 500 }
     );
   }

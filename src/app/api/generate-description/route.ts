@@ -46,10 +46,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ description: optimized });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en API Route /api/generate-description:', error);
 
-    if (error?.message === 'GEMINI_API_KEY_MISSING') {
+    const isApiKeyMissing = error instanceof Error && error.message === 'GEMINI_API_KEY_MISSING';
+    if (isApiKeyMissing) {
       return NextResponse.json(
         { error: 'Configuración incompleta. Por favor, configura tu GEMINI_API_KEY en el archivo .env.local para activar el asistente de IA.' },
         { status: 500 }
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error?.message || 'Ocurrió un error inesperado al optimizar el texto con Gemini.' },
+      { error: error instanceof Error ? error.message : 'Ocurrió un error inesperado al optimizar el texto con Gemini.' },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import Image from 'next/image';
 import { useVehiculos } from '@/core/hooks/useVehiculos';
 import { Vehiculo, VehiculoEstado, TipoVehiculo, TipoCombustible, TipoTransmision } from '@/core/types/vehiculo';
 import { 
@@ -12,7 +13,6 @@ import {
   Loader2, 
   AlertCircle, 
   CheckCircle,
-  Eye,
   Sparkles
 } from 'lucide-react';
 import { ImageUploader } from '@/components/dashboard/ImageUploader';
@@ -177,9 +177,9 @@ export default function InventarioPage() {
           setIsFormOpen(false);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al guardar vehículo:', err);
-      setFormError(err?.message || 'Error al procesar la subida o guardar el registro.');
+      setFormError(err instanceof Error ? err.message : 'Error al procesar la subida o guardar el registro.');
     } finally {
       setIsSubmitting(false);
       setUploadProgress(null);
@@ -273,9 +273,9 @@ export default function InventarioPage() {
                   <tr key={v.id} className="hover:bg-slate-50/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-200">
+                        <div className="relative h-10 w-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-200">
                           {v.imagenes && v.imagenes.length > 0 ? (
-                            <img src={v.imagenes[0]} alt="" className="h-full w-full object-cover" />
+                            <Image src={v.imagenes[0]} alt={`${v.marca} ${v.modelo}`} fill className="object-cover" />
                           ) : (
                             <div className="h-full w-full bg-slate-100 flex items-center justify-center text-[8px] text-slate-400 font-bold">
                               SIN FOTO
@@ -546,9 +546,9 @@ export default function InventarioPage() {
                         if (data.description) {
                           setDescripcion(data.description);
                         }
-                      } catch (err: any) {
+                      } catch (err: unknown) {
                         console.error('Error optimizando descripción:', err);
-                        setFormError(err?.message || 'No se pudo optimizar la descripción con Gemini.');
+                        setFormError(err instanceof Error ? err.message : 'No se pudo optimizar la descripción con Gemini.');
                       } finally {
                         setIsOptimizing(false);
                       }

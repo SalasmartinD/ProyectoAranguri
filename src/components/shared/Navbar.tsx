@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Car, LayoutDashboard, User } from 'lucide-react';
+import { Car, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();

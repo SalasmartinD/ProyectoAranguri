@@ -220,10 +220,10 @@ export async function POST(request: Request) {
       success: true,
       movimiento
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error general en liquidar-sueldo Route:', error);
     return NextResponse.json(
-      { error: error?.message || 'Ocurrió un error inesperado al procesar la liquidación.' },
+      { error: error instanceof Error ? error.message : 'Ocurrió un error inesperado al procesar la liquidación.' },
       { status: 500 }
     );
   }

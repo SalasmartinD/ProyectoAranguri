@@ -3,15 +3,11 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/core/services/supabase';
 import { useEmpleados } from '@/core/hooks/useEmpleados';
-import { TipoRemuneracion } from '@/core/types/empleado';
 import { 
-  DollarSign, 
   TrendingUp, 
   TrendingDown, 
   Activity, 
   CheckCircle, 
-  Calendar, 
-  User, 
   CreditCard, 
   Loader2, 
   FileText, 
@@ -136,9 +132,9 @@ export default function FinanzasPage() {
 
       if (movesErr) throw movesErr;
       setMovimientos(movesData || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching finanzas:', err);
-      setErrorFinanzas(err?.message || 'Error al obtener datos financieros del período.');
+      setErrorFinanzas(err instanceof Error ? err.message : 'Error al obtener datos financieros del período.');
     } finally {
       setLoadingFinanzas(false);
     }
@@ -165,20 +161,38 @@ export default function FinanzasPage() {
   }, [categoriasMaster, manualTipo]);
 
   useEffect(() => {
-    if (categoriasFiltradas.length > 0) {
-      const exists = categoriasFiltradas.some((c) => c.id === manualCategoriaId);
-      if (!exists) {
-        setManualCategoriaId(categoriasFiltradas[0].id);
+    let active = true;
+    const updateDefaultCategory = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      if (categoriasFiltradas.length > 0) {
+        const exists = categoriasFiltradas.some((c) => c.id === manualCategoriaId);
+        if (!exists) {
+          setManualCategoriaId(categoriasFiltradas[0].id);
+        }
+      } else {
+        setManualCategoriaId('');
       }
-    } else {
-      setManualCategoriaId('');
-    }
+    };
+    updateDefaultCategory();
+    return () => {
+      active = false;
+    };
   }, [categoriasFiltradas, manualCategoriaId]);
 
   useEffect(() => {
-    fetchEmpleados();
-    fetchDatosFinancieros();
-    fetchCategoriasMaster();
+    let active = true;
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      fetchEmpleados();
+      fetchDatosFinancieros();
+      fetchCategoriasMaster();
+    };
+    load();
+    return () => {
+      active = false;
+    };
   }, [fetchEmpleados, fetchDatosFinancieros, fetchCategoriasMaster]);
 
   // Auxiliar para verificar si un empleado ya fue liquidado en este período
@@ -220,9 +234,9 @@ export default function FinanzasPage() {
 
       setSuccessMessage('Liquidación y pago registrados con éxito en la caja.');
       await fetchDatosFinancieros();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error pagando sueldo:', err);
-      setErrorFinanzas(err.message);
+      setErrorFinanzas(err instanceof Error ? err.message : 'Error al procesar la liquidación.');
     } finally {
       setPayingEmployeeId(null);
     }
@@ -257,9 +271,10 @@ export default function FinanzasPage() {
       setManualDescripcion('');
       setSuccessMessage('Movimiento manual registrado exitosamente.');
       await fetchDatosFinancieros();
-    } catch (err: any) {
-      console.error('Error detallado:', err.message, err.status, err.response || err);
-      setErrorFinanzas(err.message || err.details || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
+    } catch (err: unknown) {
+      console.error('Error detallado:', err);
+      const errMsg = err instanceof Error ? err.message : 'Error de base de datos.';
+      setErrorFinanzas(errMsg);
     } finally {
       setIsSavingManual(false);
     }

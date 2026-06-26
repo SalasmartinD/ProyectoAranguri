@@ -24,9 +24,9 @@ export function useOperaciones() {
 
       if (dbError) throw dbError;
       setTransacciones(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching transacciones:', err);
-      setError(err?.message || 'Error al obtener el historial de operaciones.');
+      setError(err instanceof Error ? err.message : 'Error al obtener el historial de operaciones.');
     } finally {
       setLoading(false);
     }
@@ -80,9 +80,9 @@ export function useOperaciones() {
 
       await fetchTransacciones();
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al registrar compra:', err);
-      setError(err?.message || 'Error al registrar la transacción de compra.');
+      setError(err instanceof Error ? err.message : 'Error al registrar la transacción de compra.');
       return false;
     } finally {
       setLoading(false);
@@ -118,9 +118,9 @@ export function useOperaciones() {
 
       await fetchTransacciones();
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al registrar venta:', err);
-      setError(err?.message || 'Error al registrar la transacción de venta.');
+      setError(err instanceof Error ? err.message : 'Error al registrar la transacción de venta.');
       return false;
     } finally {
       setLoading(false);

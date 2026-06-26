@@ -8,10 +8,7 @@ import { VehiculoInput, TipoVehiculo, TipoCombustible, TipoTransmision } from '@
 import { 
   ArrowUpRight, 
   ArrowDownLeft, 
-  Plus, 
   DollarSign, 
-  Users, 
-  Car,
   AlertCircle, 
   CheckCircle,
   FileText,
@@ -21,7 +18,7 @@ import { ImageUploader } from '@/components/dashboard/ImageUploader';
 import { supabase } from '@/core/services/supabase';
 
 export default function OperacionesPage() {
-  const { transacciones, loading: txLoading, error: txError, fetchTransacciones, registrarCompra, registrarVenta } = useOperaciones();
+  const { transacciones, loading: txLoading, fetchTransacciones, registrarCompra, registrarVenta } = useOperaciones();
   const { vehiculos, fetchVehiculos } = useVehiculos();
   const { empleados, fetchEmpleados } = useEmpleados();
 
@@ -162,9 +159,9 @@ export default function OperacionesPage() {
       } else {
         setErrorMsg('Error al registrar el vehículo y la transacción de compra.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al registrar la compra:', err);
-      setErrorMsg(err?.message || 'Error al subir las imágenes o registrar el vehículo.');
+      setErrorMsg(err instanceof Error ? err.message : 'Error al subir las imágenes o registrar el vehículo.');
     } finally {
       setIsSubmitting(false);
       setUploadProgress(null);

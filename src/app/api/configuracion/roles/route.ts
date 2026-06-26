@@ -27,10 +27,10 @@ export async function GET(request: Request) {
     if (error) throw error;
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching roles API:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al obtener los roles.' },
+      { error: error instanceof Error ? error.message : 'Error al obtener los roles.' },
       { status: 500 }
     );
   }
@@ -57,10 +57,10 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, role: data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating role API:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al crear el rol.' },
+      { error: error instanceof Error ? error.message : 'Error al crear el rol.' },
       { status: 500 }
     );
   }

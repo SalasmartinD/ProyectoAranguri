@@ -9,7 +9,6 @@ import {
   Plus, 
   TrendingUp, 
   Award, 
-  DollarSign, 
   X, 
   AlertCircle, 
   CheckCircle,
@@ -63,9 +62,18 @@ export default function EmpleadosPage() {
   }, [rolId]);
 
   useEffect(() => {
-    fetchEmpleados();
-    calcularKPIs();
-    fetchRolesMaster();
+    let active = true;
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      fetchEmpleados();
+      calcularKPIs();
+      fetchRolesMaster();
+    };
+    load();
+    return () => {
+      active = false;
+    };
   }, [fetchEmpleados, calcularKPIs, fetchRolesMaster]);
 
   // Abrir modal para agregar

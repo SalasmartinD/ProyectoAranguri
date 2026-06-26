@@ -37,9 +37,9 @@ export default function LoginPage() {
       if (authError) throw authError;
 
       router.replace('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err?.message || 'Credenciales incorrectas o error de conexión.');
+      setError(err instanceof Error ? err.message : 'Credenciales incorrectas o error de conexión.');
     } finally {
       setLoading(false);
     }

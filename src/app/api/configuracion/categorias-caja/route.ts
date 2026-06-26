@@ -27,10 +27,10 @@ export async function GET(request: Request) {
     if (error) throw error;
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching categories API:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al obtener las categorías.' },
+      { error: error instanceof Error ? error.message : 'Error al obtener las categorías.' },
       { status: 500 }
     );
   }
@@ -64,10 +64,10 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, categoria: data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating category API:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al crear la categoría.' },
+      { error: error instanceof Error ? error.message : 'Error al crear la categoría.' },
       { status: 500 }
     );
   }
