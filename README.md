@@ -118,12 +118,12 @@ El prompt de instrucción del sistema (`systemInstruction`) obliga a Gemini a ac
 
 ## 6. QA y Testing Unitario (Vitest)
 
-Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de la lógica de negocio pura, implementamos una infraestructura moderna de pruebas unitarias.
+Para garantizar la estabilidad a largo plazo del micro-ERP y automatizar la validación de la lógica de negocio pura, implementé una infraestructura moderna de pruebas unitarias.
 
-### 🧪 Pruebas Unitarias
-Elegimos **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
+### Pruebas Unitarias
+Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y TypeScript, permitiendo resolver correctamente los alias de importación (como `@/*`) definidos en `tsconfig.json`.
 
-Hemos cubierto con pruebas de robustez y mocks dos módulos críticos del negocio:
+Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
 
 1. **Motor de Liquidación de Haberes** (`src/app/api/finanzas/liquidar-sueldo/liquidacion.test.ts`):
    - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
@@ -144,11 +144,11 @@ npm run test
 
 ---
 
-## 🚀 7. Pipeline de CI/CD y Estrategia de Despliegue Continuo (CD)
+## 7. Pipeline de CI/CD y Estrategia de Despliegue Continuo (CD)
 
-La plataforma implementa un flujo de entrega automatizado de nivel corporativo utilizando **GitHub Actions** para la Integración Continua (CI) y **Vercel** para el Despliegue Continuo (CD), protegiendo la integridad del entorno de producción de forma nativa.
+La plataforma implementa un flujo de entrega automatizado utilizando **GitHub Actions** para la Integración Continua (CI) y **Vercel** para el Despliegue Continuo (CD), protegiendo la integridad del entorno de producción de forma nativa.
 
-### 🔄 El Flujo de Trabajo Basado en Ramas y Pull Requests
+### El Flujo de Trabajo Basado en Ramas y Pull Requests
 Para evitar despliegues accidentales o código roto en producción, se estableció un **Guardrail de Producción** estricto en la rama principal (`main`):
 
 1. **Desarrollo Aislado:** Los cambios y nuevas funcionalidades se trabajan en ramas secundarias dinámicas (`feature/*`, `test/*`, `bugfix/*`).
@@ -165,7 +165,7 @@ graph TD
     E --> F[Vercel: Build y Despliegue a URL Pública]
 ```
 
-### ⚙️ Optimización y Hosting en Vercel
+### Optimización y Hosting en Vercel
 * **Alineación con Next.js 16**: Optimización nativa para las rutas dinámicas y el procesamiento de recursos estáticos de Next.js.
 * **Configuración Segura de Variables de Entorno**: Las variables de entorno de Supabase y Google Gemini se encuentran encriptadas y sincronizadas de manera segura en la consola de Vercel, garantizando un entorno aislado.
 
