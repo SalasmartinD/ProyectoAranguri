@@ -65,13 +65,13 @@ export function LiquidacionPanel({
   anio,
 }: LiquidacionPanelProps) {
   return (
-    <div className="lg:col-span-2 space-y-4">
+    <div className="lg:col-span-2 space-y-4 min-w-0">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-indigo-600" />
         <h2 className="text-lg font-bold text-slate-900">Liquidación de Haberes y Comisiones</h2>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-w-0">
         {loadingEmpleados || loadingFinanzas ? (
           <div className="py-20 flex items-center justify-center text-slate-400 text-xs gap-2">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />

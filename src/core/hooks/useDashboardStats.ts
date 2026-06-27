@@ -89,8 +89,21 @@ export function useDashboardStats() {
       if (ultimasTxErr) throw ultimasTxErr;
       setRecentTransacciones(ultimasTx || []);
     } catch (err: unknown) {
-      console.error('Error loading dashboard stats:', err);
-      setError(err instanceof Error ? err.message : 'Error al obtener las métricas del panel.');
+      const errorObj = err as Record<string, unknown>;
+      const message = typeof errorObj?.message === 'string' ? errorObj.message : '';
+      const details = typeof errorObj?.details === 'string' ? errorObj.details : 'N/A';
+      const hint = typeof errorObj?.hint === 'string' ? errorObj.hint : 'N/A';
+      const code = typeof errorObj?.code === 'string' ? errorObj.code : 'N/A';
+
+      console.error('--- DETALLE DEL ERROR EN DASHBOARD ---');
+      console.error('Mensaje:', message || String(err));
+      console.error('Detalle:', details);
+      console.error('Hint:', hint);
+      console.error('Código:', code);
+      console.error('--------------------------------------');
+      
+      const msg = message || (typeof err === 'string' ? err : 'Error al obtener las métricas del panel.');
+      setError(msg);
     } finally {
       setLoading(false);
     }

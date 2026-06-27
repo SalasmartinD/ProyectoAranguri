@@ -99,7 +99,7 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
       {/* Sidebar de Escritorio */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-900 text-white border-r border-slate-800">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-slate-900 text-white border-r border-slate-800">
         <div className="flex h-16 items-center px-6 border-b border-slate-800 gap-2">
           <Car className="h-6 w-6 text-indigo-400" />
           <span className="font-bold text-base tracking-tight">Panel Administrativo</span>
@@ -152,78 +152,101 @@ export default function DashboardLayout({
       </aside>
 
       {/* Contenido Principal */}
-      <div className="flex-1 flex flex-col md:pl-64">
+      <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         {/* Header móvil */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:hidden shadow-sm">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden shadow-sm">
           <div className="flex items-center gap-2">
             <Car className="h-5 w-5 text-indigo-600" />
-            <span className="font-bold text-sm">Aranguri Admin</span>
+            <span className="font-bold text-sm text-slate-800">Aranguri Admin</span>
           </div>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none cursor-pointer"
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </header>
 
-        {/* Menú móvil desplegable */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm md:hidden" onClick={() => setMobileMenuOpen(false)}>
-            <nav
-              className="fixed bottom-0 top-16 left-0 w-64 bg-slate-900 p-6 flex flex-col justify-between"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        isActive(item.href)
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-400 hover:bg-slate-800'
-                      }`}
-                    >
-                      <Icon className="h-4.5 w-4.5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
+        {/* Backdrop del Drawer móvil */}
+        <div 
+          className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+            mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setMobileMenuOpen(false)}
+        />
 
-              <div className="border-t border-slate-800 pt-6 space-y-4">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <User className="h-4.5 w-4.5 text-indigo-400" />
-                  <span className="truncate">{userEmail}</span>
-                </div>
-                <div className="space-y-2">
-                  <Link
-                    href="/"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:bg-slate-800"
-                  >
-                    <Home className="h-4 w-4" />
-                    Volver a la Web
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold text-red-400 hover:bg-red-950/20"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Cerrar Sesión
-                  </button>
-                </div>
+        {/* Drawer móvil (Deslizamiento) */}
+        <nav
+          className={`fixed bottom-0 top-0 left-0 z-40 w-64 bg-slate-900 p-6 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          style={{ backgroundColor: '#0f172a', opacity: 1 }}
+        >
+          <div>
+            {/* Header Drawer */}
+            <div className="flex h-16 items-center justify-between border-b border-slate-800 mb-6 -mt-2">
+              <div className="flex items-center gap-2">
+                <Car className="h-5 w-5 text-indigo-400" />
+                <span className="font-bold text-sm text-white">Aranguri Admin</span>
               </div>
-            </nav>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Items del Drawer */}
+            <div className="space-y-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all ${
+                      isActive(item.href)
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Icon className="h-4.5 w-4.5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        )}
+
+          <div className="border-t border-slate-800 pt-6 space-y-4">
+            <div className="flex items-center gap-2 text-xs text-slate-400 px-3">
+              <User className="h-4.5 w-4.5 text-indigo-400 shrink-0" />
+              <span className="truncate">{userEmail}</span>
+            </div>
+            <div className="space-y-2">
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <Home className="h-4 w-4" />
+                Volver a la Web
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-950/20 hover:text-red-300 transition-colors cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </nav>
 
         {/* Área del Dashboard */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto overflow-x-hidden min-w-0">
           {children}
         </main>
       </div>

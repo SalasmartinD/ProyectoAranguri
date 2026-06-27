@@ -289,6 +289,7 @@ USING (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_met
    * **1° -** [schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) (Estructura base, RLS perimetral y tablas del core).
    * **2° -** [logs_schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/logs_schema.sql) (Esquema de auditoría centralizado para Vercel).
    * **3° -** [refactor_caja_stock.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/refactor_caja_stock.sql) (Unificación de stock con egreso en caja automático y validaciones de baja lógica).
+   * **4° -** [permissions_fix.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/permissions_fix.sql) (Solución de permisos de ejecución para funciones RLS de roles).
 4. **Creá el Bucket de Storage:** Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
 
 ---
