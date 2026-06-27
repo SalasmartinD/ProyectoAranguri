@@ -285,7 +285,10 @@ USING (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_met
 #### Pasos para la Inicialización:
 1. **Ingresá a tu Consola de Supabase:** Andá a la sección **SQL Editor** en el panel lateral izquierdo.
 2. **Creá un Nuevo Query:** Hacé clic en "+ New query".
-3. **Pegá y Ejecutá el Script:** Copiá el contenido del archivo de migración [supabase/migrations/schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) y hacé clic en **Run**.
+3. **Ejecutá los Scripts de Migración en Orden:** Copiá y ejecutá el contenido de los archivos de migración ubicados en el directorio `supabase/migrations/` en el siguiente orden secuencial para habilitar las tablas, políticas de seguridad RLS y disparadores:
+   * **1° -** [schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) (Estructura base, RLS perimetral y tablas del core).
+   * **2° -** [logs_schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/logs_schema.sql) (Esquema de auditoría centralizado para Vercel).
+   * **3° -** [refactor_caja_stock.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/refactor_caja_stock.sql) (Unificación de stock con egreso en caja automático y validaciones de baja lógica).
 4. **Creá el Bucket de Storage:** Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
 
 ---
@@ -303,4 +306,4 @@ Una vez configurado todo el entorno y la base de datos, podés arrancar el servi
     ```bash
     npm run test
     ```
-    Esto ejecutará los 12 tests automatizados del motor financiero y del parseador de catálogo de forma instantánea.
+    Esto ejecutará los **18 tests automatizados** del motor financiero, parseador de filtros, sanitización de inputs y logger de forma instantánea.

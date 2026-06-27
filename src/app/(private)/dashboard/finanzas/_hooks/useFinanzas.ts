@@ -48,17 +48,17 @@ export function useFinanzas() {
   const [mes, setMes] = useState<number>(new Date().getMonth() + 1);
   const [anio, setAnio] = useState<number>(new Date().getFullYear());
 
-  // Filtrar empleados contratados en el período seleccionado
+  // Filtrar empleados contratados y activos en el período seleccionado
   const empleadosFiltrados = useMemo(() => {
     const selectedPeriod = anio * 12 + (mes - 1);
     return empleados.filter((emp) => {
+      // Excluir estrictamente empleados dados de baja
+      if (emp.fecha_baja !== null) return false;
+
       const altaStr = emp.fecha_alta || emp.creado_en || emp.fecha_ingreso;
       const altaPeriod = getPeriodValue(altaStr);
       
-      const bajaStr = emp.fecha_baja;
-      const bajaPeriod = bajaStr ? getPeriodValue(bajaStr) : null;
-      
-      return selectedPeriod >= altaPeriod && (bajaPeriod === null || selectedPeriod <= bajaPeriod);
+      return selectedPeriod >= altaPeriod;
     });
   }, [empleados, mes, anio]);
 

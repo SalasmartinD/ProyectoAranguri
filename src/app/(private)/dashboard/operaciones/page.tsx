@@ -14,11 +14,9 @@ export default function OperacionesPage() {
     fetchVehiculos,
     fetchEmpleados,
     vehiculosDisponibles,
-    empleados,
+    empleadosActivos,
 
     // Estados de control y mensajes
-    activeTab,
-    setActiveTab,
     selectedEmpleadoId,
     setSelectedEmpleadoId,
     successMsg,
@@ -31,35 +29,6 @@ export default function OperacionesPage() {
     montoVenta,
     setMontoVenta,
     handleVentaSubmit,
-
-    // Formulario Compra
-    marca,
-    setMarca,
-    modelo,
-    setModelo,
-    anio,
-    setAnio,
-    precioCompra,
-    setPrecioCompra,
-    precioVenta,
-    setPrecioVenta,
-    kilometros,
-    setKilometros,
-    existingImages,
-    setExistingImages,
-    selectedFiles,
-    setSelectedFiles,
-    uploadProgress,
-    isSubmitting,
-    tipo,
-    setTipo,
-    combustible,
-    setCombustible,
-    transmision,
-    setTransmision,
-    motorizacion,
-    setMotorizacion,
-    handleCompraSubmit,
   } = useOperacionesForm();
 
   // Carga inicial de datos
@@ -87,12 +56,12 @@ export default function OperacionesPage() {
   }, [successMsg, setSuccessMsg]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-3">
+    <div className="grid gap-8 lg:grid-cols-3 animate-in fade-in duration-200">
       {/* Columna de Formularios */}
       <div className="lg:col-span-1 space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Operaciones de Caja</h1>
-          <p className="text-slate-500 text-sm">Registra compras y ventas de stock con impacto en tiempo real.</p>
+          <p className="text-slate-500 text-sm">Registra ventas de vehículos con impacto en tiempo real en la caja diaria.</p>
         </div>
 
         {/* Alertas */}
@@ -111,11 +80,9 @@ export default function OperacionesPage() {
 
         {/* Caja de Formularios */}
         <OperacionesForm
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           selectedEmpleadoId={selectedEmpleadoId}
           setSelectedEmpleadoId={setSelectedEmpleadoId}
-          empleados={empleados}
+          empleadosActivos={empleadosActivos}
           txLoading={txLoading}
           selectedVehiculoId={selectedVehiculoId}
           setSelectedVehiculoId={setSelectedVehiculoId}
@@ -123,33 +90,6 @@ export default function OperacionesPage() {
           montoVenta={montoVenta}
           setMontoVenta={setMontoVenta}
           handleVentaSubmit={handleVentaSubmit}
-          marca={marca}
-          setMarca={setMarca}
-          modelo={modelo}
-          setModelo={setModelo}
-          anio={anio}
-          setAnio={setAnio}
-          kilometros={kilometros}
-          setKilometros={setKilometros}
-          precioCompra={precioCompra}
-          setPrecioCompra={setPrecioCompra}
-          precioVenta={precioVenta}
-          setPrecioVenta={setPrecioVenta}
-          tipo={tipo}
-          setTipo={setTipo}
-          combustible={combustible}
-          setCombustible={setCombustible}
-          transmision={transmision}
-          setTransmision={setTransmision}
-          motorizacion={motorizacion}
-          setMotorizacion={setMotorizacion}
-          existingImages={existingImages}
-          setExistingImages={setExistingImages}
-          selectedFiles={selectedFiles}
-          setSelectedFiles={setSelectedFiles}
-          uploadProgress={uploadProgress}
-          isSubmitting={isSubmitting}
-          handleCompraSubmit={handleCompraSubmit}
         />
       </div>
 
@@ -161,3 +101,4 @@ export default function OperacionesPage() {
     </div>
   );
 }
+
