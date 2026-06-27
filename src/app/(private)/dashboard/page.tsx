@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/core/services/supabase';
+import React from 'react';
 import { 
   Database, 
   DollarSign, 
@@ -12,106 +11,24 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import Link from 'next/link';
-
-interface DashboardStats {
-  autosDisponibles: number;
-  autosVendidos: number;
-  ventasMes: number;
-  montoVentasMes: number;
-  gananciaMes: number;
-}
-
-interface RecentTransaccion {
-  id: string;
-  tipo: 'Compra' | 'Venta';
-  monto: number;
-  ganancia_neta?: number | null;
-  fecha: string;
-  vehiculo: { marca: string; modelo: string }[] | { marca: string; modelo: string } | null;
-  empleado: { nombre: string }[] | { nombre: string } | null;
-}
+import { useDashboardStats } from '@/core/hooks/useDashboardStats';
+import { formatCurrency } from '@/core/utils/finance';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
-    autosDisponibles: 0,
-    autosVendidos: 0,
-    ventasMes: 0,
-    montoVentasMes: 0,
-    gananciaMes: 0,
-  });
-  const [recentTransacciones, setRecentTransacciones] = useState<RecentTransaccion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { stats, recentTransacciones, loading, error, fetchDashboardData } = useDashboardStats();
 
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // 1. Obtener conteo de vehículos por estado
-        const { data: vehiculosData, error: vehiculosErr } = await supabase
-          .from('vehiculos')
-          .select('estado');
-
-        if (vehiculosErr) throw vehiculosErr;
-
-        const disponibles = (vehiculosData || []).filter(v => v.estado === 'Disponible').length;
-        const vendidos = (vehiculosData || []).filter(v => v.estado === 'Vendido').length;
-
-        // 2. Obtener transacciones del mes
-        const inicioMes = new Date();
-        inicioMes.setDate(1);
-        inicioMes.setHours(0, 0, 0, 0);
-
-        const { data: txMes, error: txErr } = await supabase
-          .from('transacciones')
-          .select('monto, ganancia_neta, tipo, fecha')
-          .gte('fecha', inicioMes.toISOString());
-
-        if (txErr) throw txErr;
-
-        const ventasMes = (txMes || []).filter(tx => tx.tipo === 'Venta');
-        const cantidadVentas = ventasMes.length;
-        const montoVentas = ventasMes.reduce((acc, tx) => acc + Number(tx.monto), 0);
-        const gananciaMes = ventasMes.reduce((acc, tx) => acc + Number(tx.ganancia_neta), 0);
-
-        setStats({
-          autosDisponibles: disponibles,
-          autosVendidos: vendidos,
-          ventasMes: cantidadVentas,
-          montoVentasMes: montoVentas,
-          gananciaMes,
-        });
-
-        // 3. Obtener últimas 5 transacciones con relaciones
-        const { data: ultimasTx, error: ultimasTxErr } = await supabase
-          .from('transacciones')
-          .select(`
-            id,
-            tipo,
-            monto,
-            ganancia_neta,
-            fecha,
-            vehiculo:vehiculos(marca, modelo),
-            empleado:empleados(nombre)
-          `)
-          .order('fecha', { ascending: false })
-          .limit(5);
-
-        if (ultimasTxErr) throw ultimasTxErr;
-        setRecentTransacciones(ultimasTx || []);
-
-      } catch (err: unknown) {
-        console.error('Error loading dashboard stats:', err);
-        setError('Error al calcular las métricas del panel principal.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboardData();
-  }, []);
+  React.useEffect(() => {
+    let active = true;
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      fetchDashboardData();
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, [fetchDashboardData]);
 
   if (loading) {
     return (
@@ -141,15 +58,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Título */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Panel de Control General</h1>
         <p className="text-slate-500 text-sm">Resumen mensual y estado del inventario de la concesionaria.</p>
       </div>
 
-      {/* Tarjetas KPI */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {/* KPI 1: Stock */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Stock Disponible</span>
@@ -161,23 +75,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI 2: Ventas del Mes */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Ventas Concretadas (Mes)</span>
             <span className="text-3xl font-extrabold text-slate-900">{stats.ventasMes}</span>
-            <span className="text-[10px] text-slate-500 block">Monto total: ${stats.montoVentasMes.toLocaleString('es-AR')}</span>
+            <span className="text-[10px] text-slate-500 block">Monto total: {formatCurrency(stats.montoVentasMes)}</span>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <DollarSign className="h-6 w-6" />
           </div>
         </div>
 
-        {/* KPI 3: Ganancia Neta */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Ganancia Neta (Mes)</span>
-            <span className="text-3xl font-extrabold text-emerald-600">${stats.gananciaMes.toLocaleString('es-AR')}</span>
+            <span className="text-3xl font-extrabold text-emerald-600">{formatCurrency(stats.gananciaMes)}</span>
             <span className="text-[10px] text-slate-500 block">Calculado sobre costo de compra</span>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
@@ -186,7 +98,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Historial Reciente */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 p-5">
           <div className="flex items-center gap-2">
@@ -249,10 +160,10 @@ export default function DashboardPage() {
                         {emp?.nombre || 'Desconocido'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap font-extrabold text-slate-900">
-                        ${Number(tx.monto).toLocaleString('es-AR')}
+                        {formatCurrency(tx.monto)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-emerald-600">
-                        {tx.tipo === 'Venta' ? `$${Number(tx.ganancia_neta).toLocaleString('es-AR')}` : '-'}
+                        {tx.tipo === 'Venta' ? formatCurrency(tx.ganancia_neta) : '-'}
                       </td>
                     </tr>
                   );

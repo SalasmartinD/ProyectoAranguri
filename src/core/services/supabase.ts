@@ -20,3 +20,14 @@ export const getSupabaseAdminClient = () => {
     },
   });
 };
+
+// Retorna un cliente de Supabase autenticado utilizando el token JWT del encabezado Authorization
+export function getSupabaseAuthClient(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.split(' ')[1];
+  if (!token) return supabase;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}

@@ -176,7 +176,7 @@ graph TD
 
 Esta guía te permitirá clonar la plataforma, configurar las variables de entorno e inicializar tu propia base de datos en Supabase desde cero para levantar el proyecto en un entorno local de desarrollo.
 
-### 📋 Requisitos Previos
+### Requisitos Previos
 *   **Node.js**: Versión 18.0 o superior (se recomienda v20+ o v22+).
 *   **npm** o **pnpm** como gestor de paquetes.
 *   Una cuenta activa de **Supabase** (para base de datos relacional y storage).
@@ -184,7 +184,7 @@ Esta guía te permitirá clonar la plataforma, configurar las variables de entor
 
 ---
 
-### 📥 Paso 1: Clonar el Repositorio e Instalar Dependencias
+### Paso 1: Clonar el Repositorio e Instalar Dependencias
 Cloná el proyecto e ingresá al directorio raíz para instalar las dependencias necesarias de forma limpia:
 
 ```bash
@@ -197,7 +197,7 @@ npm install
 
 ---
 
-### ⚙️ Paso 2: Configuración de Variables de Entorno (.env.local)
+### Paso 2: Configuración de Variables de Entorno (.env.local)
 Creá un archivo llamado `.env.local` en la raíz del directorio basándote en el archivo de ejemplo [.env.local.example](file:///e:/ProyectoAranguri/concesionaria/.env.local.example):
 
 ```bash
@@ -214,43 +214,62 @@ SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-privada-de-supabase
 GEMINI_API_KEY=tu-api-key-de-gemini
 ```
 
-> [!IMPORTANTE]
+> [!IMPORTANT]
 > La variable `SUPABASE_SERVICE_ROLE_KEY` nunca debe exponerse en el cliente (no debe llevar el prefijo `NEXT_PUBLIC_`). El endpoint de liquidación de sueldos la utiliza del lado del servidor de forma protegida para consolidar el egreso financiero en la caja sin restricciones del RLS de los empleados comunes.
 
 ---
 
-### 🗄️ Paso 3: Inicialización de la Base de Datos (Supabase)
+### Paso 3: Inicialización de la Base de Datos (Supabase)
 
-La plataforma utiliza un esquema de seguridad **Row Level Security (RLS)** que bloquea por defecto cualquier consulta maliciosa o no autenticada y segmenta el acceso de escritura e historial financiero entre los roles de **Administrador** y **Vendedor**.
+Para garantizar un entorno seguro y con integridad referencial a prueba de fallos contables, diseñé un esquema de base de datos relacional y políticas de seguridad estrictas. El script de inicialización completo se encuentra en el repositorio en [supabase/migrations/schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql).
 
-Para levantar las tablas y políticas en tu proyecto de Supabase, seguí estos pasos:
+#### Diccionario de Esquema y Relaciones Críticas
 
+A continuación, te detallo las tablas operativas y las restricciones de base de datos que garantizan la consistencia:
+
+| Tabla | Columna Clave / Restricción | Propósito Arquitectónico / DX |
+| :--- | :--- | :--- |
+| `public.empleados` | `fecha_alta` y `fecha_baja` | Habilitan el mecanismo de **Baja Lógica**. Cuando das de baja a un empleado, no borrás físicamente el registro (lo que rompería las referencias de ventas del pasado), sino que seteás `fecha_baja` para inhabilitarlo en el periodo actual. |
+| `public.movimientos_caja` | `monto NUMERIC(12, 2) check (monto > 0)` | Garantiza la precisión decimal contable requerida para el libro diario, impidiendo importes vacíos, nulos o negativos a nivel de motor SQL. |
+| **Relaciones Foráneas** | `ON DELETE RESTRICT` | Las relaciones de `empleado_id` en las tablas `transacciones` y `movimientos_caja` se configuran con restricción de borrado para evitar que se puedan eliminar registros de personal que contengan transacciones financieras históricas. |
+
+#### Automatización Mediante Funciones y Triggers (PL/pgSQL)
+
+El motor de base de datos automatiza de forma transaccional la sincronización de inventario y caja mediante triggers escritos en PL/pgSQL:
+
+*   **Sincronización Automática de Stock (`trg_procesar_operacion_transaccional`):**
+    Al insertar una venta en la tabla `transacciones`, el trigger ejecuta `procesar_operacion_transaccional()`, el cual actualiza el estado del vehículo en `vehiculos` a `'Vendido'` y calcula la ganancia neta en la misma transacción:
+    ```sql
+    update public.vehiculos set estado = 'Vendido' where id = new.vehiculo_id;
+    ```
+*   **Imputación en Caja Directa:**
+    El mismo trigger detecta si la operación es de tipo `'Venta'` o `'Compra'` y crea automáticamente la fila correspondiente en `movimientos_caja` (Ingreso o Egreso) impactando el libro contable de manera transaccional, evitando inconsistencias entre ventas y caja física.
+
+#### Especificación de RLS y Claims del JWT de Supabase
+
+Habilité **Row Level Security (RLS)** en todas las tablas para delegar la autorización directamente en el motor de base de datos, evaluando el rol del usuario inyectado en el JWT (`user_metadata`):
+
+```sql
+-- Ejemplo de política para controlar inserciones según el rol
+CREATE POLICY "Admin control total de vehiculos"
+ON public.vehiculos FOR ALL
+TO authenticated
+USING (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
+```
+
+##### Segmentación de Accesos a nivel de Fila:
+*   **Catálogo de Vehículos (Lectura Pública):** La tabla `vehiculos` cuenta con una política abierta para `SELECT` (`using (true)`) que permite a los visitantes del catálogo ver los autos disponibles sin necesidad de autenticarse.
+*   **Seguridad Contable y Personal:** En las tablas `movimientos_caja` y `empleados`, se implementó una política restrictiva que solo otorga permisos si el claim del rol del JWT coincide exactamente con `'Administrador'`. Si un usuario con rol de `'Vendedor'` intenta consultar o insertar en estas tablas, Supabase denegará la operación a nivel de fila (*Zero Trust*).
+
+#### Pasos para la Inicialización:
 1. **Ingresá a tu Consola de Supabase:** Andá a la sección **SQL Editor** en el panel lateral izquierdo.
 2. **Creá un Nuevo Query:** Hacé clic en "+ New query".
-3. **Pegá y Ejecutá la Estructura de Tablas:** 
-   Ejecutá los scripts de creación de tablas en el orden adecuado (asegurándote de crear las tablas maestras primero):
-   - `roles` (maestra de roles)
-   - `categorias_caja` (maestra de categorías contables)
-   - `empleados` (tabla de empleados con clave foránea a `roles` y columnas de baja lógica `fecha_alta`/`fecha_baja`)
-   - `vehiculos` (tabla de inventario de autos)
-   - `transacciones` (operaciones de venta asociadas a un vehículo y un vendedor)
-   - `movimientos_caja` (libro contable diario)
-4. **Activá RLS y Defini Políticas:**
-   Habilitá RLS en todas las tablas mediante `ALTER TABLE public.nombre_tabla ENABLE ROW LEVEL SECURITY;` y cargá las políticas basadas en el rol del JWT:
-   ```sql
-   -- Ejemplo de política para verificar el rol del usuario autenticado
-   CREATE POLICY "Escritura exclusiva de Administradores"
-   ON public.vehiculos
-   FOR INSERT
-   TO authenticated
-   WITH CHECK (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
-   ```
-5. **Creá el Bucket de Storage:**
-   Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
+3. **Pegá y Ejecutá el Script:** Copiá el contenido del archivo de migración [supabase/migrations/schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) y hacé clic en **Run**.
+4. **Creá el Bucket de Storage:** Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
 
 ---
 
-### 🏎️ Paso 4: Ejecución Local y Suite de Tests
+### Paso 4: Ejecución Local y Suite de Tests
 Una vez configurado todo el entorno y la base de datos, podés arrancar el servidor de desarrollo y validar la integridad con los tests automáticos:
 
 *   **Correr el Servidor de Desarrollo (con soporte de Turbopack):**

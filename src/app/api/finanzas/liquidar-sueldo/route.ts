@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/core/services/supabase';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAuthClient } from '@/core/services/supabase';
 import { calcularSueldo } from '@/core/utils/finance';
 
 function getPeriodValue(dateStr: string): number {
@@ -18,28 +17,7 @@ function getPeriodValue(dateStr: string): number {
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.split(' ')[1];
-
-    let supabaseClient = supabase;
-    if (token) {
-      supabaseClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key',
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-          },
-        }
-      );
-    }
-
+    const supabaseClient = getSupabaseAuthClient(request);
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
