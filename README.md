@@ -172,7 +172,28 @@ graph TD
 
 ---
 
-## 8. Guía de Instalación y Configuración Local
+## 8. Decisiones de Ingeniería y Buenas Prácticas
+
+### 8.1. Refactorización Arquitectónica y Desguace de Componentes
+A medida que el panel de finanzas, catálogo y operaciones crecieron, los archivos `page.tsx` acumularon interfaces, estados complejos y llamadas a base de datos (alcanzando hasta 700 líneas). Para respetar el **Principio de Responsabilidad Única (SRP)**, apliqué una refactorización estructural:
+*   **Presentación Pura (`_components/`)**: Se extrajeron formularios, tablas y vistas a componentes visuales puros e independientes.
+*   **Lógica Desacoplada (`_hooks/`)**: Se centralizaron estados de carga, manejo de inputs, subidas de archivos y promesas asíncronas en Custom Hooks dedicados (ej: `useFinanzas.ts`, `useInventario.ts`, `useOperacionesForm.ts`).
+*   **Orquestación Minimalista**: Reduje los archivos `page.tsx` principales a menos de **100 líneas**, actuando únicamente como conectores livianos.
+
+### 8.2. Doble Escudo de Seguridad: Middleware RBAC y Sanitización en Runtime
+Implementé una estrategia de seguridad por capas para proteger las rutas y mitigar inyecciones de código:
+*   **Middleware Perimetral (RBAC)**: Desarrollé `src/middleware.ts` utilizando `@supabase/ssr` (`createServerClient`) que intercepta peticiones HTTP. Valida el rol del usuario (`rol` / `role`) desde el JWT y bloquea accesos del rol `Vendedor` a las vistas administrativas/financieras (`/dashboard/finanzas`, `/dashboard/configuracion`), redirigiéndolos de forma segura a `/dashboard/inventario`.
+*   **Sanitización de Inputs (Zod + RegExp)**: Creé `sanitizer.ts` para desinfectar entradas de texto libre (descripciones u observaciones de caja) de ataques XSS o HTML Injection. La función remueve scripts, event handlers (`onmouseover`, `onclick`) y codifica corchetes angulares. Está integrada directamente al pipeline de validación de **Zod** mediante transformaciones (`z.string().transform()`) antes de que toquen la base de datos.
+
+### 8.3. Sistema de Auditoría Inmutable (Caja Negra Serverless)
+Debido a la arquitectura efímera (stateless) de Vercel que impide registrar logs en archivos físicos locales, diseñé una telemetría centralizada en Supabase:
+*   **Persistencia Segura (`public.sistema_logs`)**: Tabla protegida con políticas RLS de lectura/escritura nulas para clientes externos.
+*   **Canalización de Escribas en Backend**: Las inserciones se administran exclusivamente desde el backend a través de la Service Role Key.
+*   **Payload Dinámico**: Registra de forma inmutable niveles de severidad (`INFO`, `WARN`, `ERROR`, `CRITICAL`), contextos lógicos (`AUTH`, `API_GEMINI`, `FINANZAS`) y payloads dinámicos mediante campos `JSONB`, registrando desde caídas imprevistas hasta auditorías operativas.
+
+---
+
+## 9. Guía de Instalación y Configuración Local
 
 Esta guía te permitirá clonar la plataforma, configurar las variables de entorno e inicializar tu propia base de datos en Supabase desde cero para levantar el proyecto en un entorno local de desarrollo.
 
