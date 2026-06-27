@@ -53,6 +53,7 @@ Trabajar con IA requiere un criterio de QA riguroso para auditar y depurar error
 | **Supabase Row-Level Security (RLS)** | Seguridad de Datos | Reglas y políticas a nivel de fila que restringen la lectura y escritura de información sensible únicamente a usuarios con sesiones autorizadas y autenticadas por Bearer Tokens, garantizando confidencialidad. |
 | **Google Gemini SDK (`gemini-2.5-flash`)** | Orquestación de IA en Tiempo Real | Modelo generativo de última generación elegido por su bajísima latencia de respuesta, ventana de contexto optimizada y excelente adhesión a instrucciones complejas en prompts del sistema. |
 | **Tailwind CSS v4** | Sistema de Estilado | Garantiza una interfaz de usuario premium, cohesiva y responsiva mediante un sistema de diseño basado en tokens visuales, permitiendo aplicar transiciones suaves y estética de alta calidad. |
+| **Vercel** | Hosting Cloud y Plataforma de CD | Hosting de producción oficial que optimiza de forma nativa las Serverless/Edge Functions y los pre-renders de Next.js, sincronizando variables de entorno y proveyendo despliegue continuo automático. |
 
 ---
 
@@ -171,44 +172,95 @@ graph TD
 
 ---
 
-## 8. Guía de Instalación y Requisitos
+## 8. Guía de Instalación y Configuración Local
 
-### Requisitos Previos
-*   **Node.js**: Versión 18.0 o superior instalada.
-*   **Supabase Account**: Base de datos de PostgreSQL inicializada con el esquema relacional correspondiente.
-*   **Google Gemini API Key**: Clave de desarrollador para la API de Generative Language.
+Esta guía te permitirá clonar la plataforma, configurar las variables de entorno e inicializar tu propia base de datos en Supabase desde cero para levantar el proyecto en un entorno local de desarrollo.
 
-### Variables de Envío
-Crea un archivo `.env.local` en la raíz del del proyecto basándote en [.env.local.example](file:///e:/ProyectoAranguri/concesionaria/.env.local.example):
+### 📋 Requisitos Previos
+*   **Node.js**: Versión 18.0 o superior (se recomienda v20+ o v22+).
+*   **npm** o **pnpm** como gestor de paquetes.
+*   Una cuenta activa de **Supabase** (para base de datos relacional y storage).
+*   Una API Key de **Google AI Studio** para el motor Gemini.
+
+---
+
+### 📥 Paso 1: Clonar el Repositorio e Instalar Dependencias
+Cloná el proyecto e ingresá al directorio raíz para instalar las dependencias necesarias de forma limpia:
 
 ```bash
-# URLs y Llaves Públicas de Supabase
+# Clonar el repositorio
+git clone https://github.com/SalasmartinD/ProyectoAranguri.git
+
+# Instalar dependencias
+npm install
+```
+
+---
+
+### ⚙️ Paso 2: Configuración de Variables de Entorno (.env.local)
+Creá un archivo llamado `.env.local` en la raíz del directorio basándote en el archivo de ejemplo [.env.local.example](file:///e:/ProyectoAranguri/concesionaria/.env.local.example):
+
+```bash
+# URL de API REST de Supabase (de la sección Project Settings > API)
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-de-supabase
 
-# Llave de Acceso Administrativo (Opcional - Usar solo en servidor)
-SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-de-supabase
+# Anon Key pública (de la sección Project Settings > API)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-publica-de-supabase
 
-# API Key de Inteligencia Artificial Google Gemini
+# Service Role Key privada (Uso exclusivo del lado del servidor para bypass de RLS)
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-privada-de-supabase
+
+# API Key para Google Gemini (de Google AI Studio)
 GEMINI_API_KEY=tu-api-key-de-gemini
 ```
 
-### Instrucciones de Despliegue Local
+> [!IMPORTANTE]
+> La variable `SUPABASE_SERVICE_ROLE_KEY` nunca debe exponerse en el cliente (no debe llevar el prefijo `NEXT_PUBLIC_`). El endpoint de liquidación de sueldos la utiliza del lado del servidor de forma protegida para consolidar el egreso financiero en la caja sin restricciones del RLS de los empleados comunes.
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/SalasmartinD/ProyectoAranguri.git
-    ```
+---
 
-2.  **Instalar dependencias del proyecto:**
-    ```bash
-    npm install
-    ```
+### 🗄️ Paso 3: Inicialización de la Base de Datos (Supabase)
 
-3.  **Iniciar el servidor de desarrollo utilizando Turbopack:**
+La plataforma utiliza un esquema de seguridad **Row Level Security (RLS)** que bloquea por defecto cualquier consulta maliciosa o no autenticada y segmenta el acceso de escritura e historial financiero entre los roles de **Administrador** y **Vendedor**.
+
+Para levantar las tablas y políticas en tu proyecto de Supabase, seguí estos pasos:
+
+1. **Ingresá a tu Consola de Supabase:** Andá a la sección **SQL Editor** en el panel lateral izquierdo.
+2. **Creá un Nuevo Query:** Hacé clic en "+ New query".
+3. **Pegá y Ejecutá la Estructura de Tablas:** 
+   Ejecutá los scripts de creación de tablas en el orden adecuado (asegurándote de crear las tablas maestras primero):
+   - `roles` (maestra de roles)
+   - `categorias_caja` (maestra de categorías contables)
+   - `empleados` (tabla de empleados con clave foránea a `roles` y columnas de baja lógica `fecha_alta`/`fecha_baja`)
+   - `vehiculos` (tabla de inventario de autos)
+   - `transacciones` (operaciones de venta asociadas a un vehículo y un vendedor)
+   - `movimientos_caja` (libro contable diario)
+4. **Activá RLS y Defini Políticas:**
+   Habilitá RLS en todas las tablas mediante `ALTER TABLE public.nombre_tabla ENABLE ROW LEVEL SECURITY;` y cargá las políticas basadas en el rol del JWT:
+   ```sql
+   -- Ejemplo de política para verificar el rol del usuario autenticado
+   CREATE POLICY "Escritura exclusiva de Administradores"
+   ON public.vehiculos
+   FOR INSERT
+   TO authenticated
+   WITH CHECK (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
+   ```
+5. **Creá el Bucket de Storage:**
+   Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
+
+---
+
+### 🏎️ Paso 4: Ejecución Local y Suite de Tests
+Una vez configurado todo el entorno y la base de datos, podés arrancar el servidor de desarrollo y validar la integridad con los tests automáticos:
+
+*   **Correr el Servidor de Desarrollo (con soporte de Turbopack):**
     ```bash
     npm run dev
     ```
+    La aplicación va a estar disponible en `http://localhost:3000`.
 
-4.  **Acceder a la aplicación:**
-    Abrí tu navegador e ingresa a `http://localhost:3000`. Para acceder a los módulos de administración, navega a `/login` e ingresa con las credenciales registradas en tu gestor de autenticación de Supabase.
+*   **Correr la Suite de Tests Unitarios (Vitest):**
+    ```bash
+    npm run test
+    ```
+    Esto ejecutará los 12 tests automatizados del motor financiero y del parseador de catálogo de forma instantánea.
