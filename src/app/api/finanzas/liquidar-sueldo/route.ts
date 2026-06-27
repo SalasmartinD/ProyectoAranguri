@@ -75,14 +75,11 @@ export async function POST(request: Request) {
       }
     }
 
-    if (empleado.fecha_baja) {
-      const bajaPeriod = getPeriodValue(empleado.fecha_baja);
-      if (targetPeriod > bajaPeriod) {
-        return NextResponse.json(
-          { error: `Operación rechazada: el período seleccionado (${numericMes.toString().padStart(2, '0')}/${numericAnio}) es posterior a la fecha de baja del empleado.` },
-          { status: 400 }
-        );
-      }
+    if (empleado.fecha_baja !== null) {
+      return NextResponse.json(
+        { error: 'Operación rechazada: el empleado seleccionado está dado de baja y no puede recibir nuevas liquidaciones.' },
+        { status: 400 }
+      );
     }
 
     // Buscar la categoría 'SUELDOS_Y_COMISIONES' dinámicamente

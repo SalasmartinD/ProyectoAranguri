@@ -21,7 +21,7 @@ create table public.roles (
 create table public.categorias_caja (
     id uuid primary key default gen_random_uuid(),
     nombre text not null unique check (char_length(nombre) >= 2),
-    tipo_flujo text not null check (tipo_flujo in ('Ingreso', 'Egreso', 'Ambos')),
+    tipo_permitido text not null check (tipo_permitido in ('INGRESO', 'EGRESO', 'AMBOS')),
     creado_en timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -79,11 +79,11 @@ create table public.transacciones (
 -- -------------------------------------------------------------------------
 create table public.movimientos_caja (
     id uuid primary key default gen_random_uuid(),
-    tipo text not null check (tipo in ('Ingreso', 'Egreso')),
+    tipo_movimiento text not null check (tipo_movimiento in ('INGRESO', 'EGRESO')),
     monto numeric(12, 2) not null check (monto > 0),
     categoria_id uuid not null references public.categorias_caja(id) on delete restrict,
     descripcion text not null check (char_length(descripcion) >= 5),
-    creado_en timestamp with time zone default timezone('utc'::text, now()) not null
+    fecha timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- -------------------------------------------------------------------------
@@ -98,7 +98,40 @@ create index idx_movimientos_caja_fecha on public.movimientos_caja(creado_en);
 -- AUTOMATIZACIÓN DE NEGOCIO: PROCEDIMIENTOS ALMACENADOS Y TRIGGERS
 -- =========================================================================
 
--- Trigger para automatizar el estado del vehículo e imputar movimientos de caja
+-- 1. Trigger para registrar egreso automático al ingresar stock
+create or replace function public.procesar_adquisicion_vehiculo_automatico()
+returns trigger as $$
+declare
+    v_categoria_id uuid;
+begin
+    select id into v_categoria_id
+    from public.categorias_caja
+    where nombre = 'Adquisición de Inventario'
+    limit 1;
+
+    if v_categoria_id is null then
+        raise exception 'La categoría contable "Adquisición de Inventario" no existe en el sistema.';
+    end if;
+
+    insert into public.movimientos_caja (tipo_movimiento, monto, categoria_id, descripcion)
+    values (
+        'EGRESO',
+        new.precio_compra,
+        v_categoria_id,
+        'Egreso automático por adquisición de stock: ' || new.marca || ' ' || new.modelo || ' (Vehículo ID: ' || new.id || ')'
+    );
+
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_procesar_adquisicion_vehiculo_automatico
+after insert on public.vehiculos
+for each row
+execute function public.procesar_adquisicion_vehiculo_automatico();
+
+
+-- 2. Trigger para registrar el ingreso al vender e inhabilitar de-autorizados
 create or replace function public.procesar_operacion_transaccional()
 returns trigger as $$
 declare
@@ -106,55 +139,43 @@ declare
     v_marca text;
     v_modelo text;
     v_categoria_ventas_id uuid;
-    v_categoria_compras_id uuid;
+    v_empleado_baja timestamp with time zone;
 begin
-    -- 1. Obtener datos del vehículo
+    -- Validar baja lógica del empleado
+    select fecha_baja into v_empleado_baja
+    from public.empleados
+    where id = new.empleado_id;
+
+    if v_empleado_baja is not null then
+        raise exception 'El empleado seleccionado está dado de baja (de-autorizado) y no puede realizar operaciones.';
+    end if;
+
+    -- Obtener datos del vehículo
     select precio_compra, marca, modelo into v_precio_compra, v_marca, v_modelo
     from public.vehiculos
     where id = new.vehiculo_id;
 
-    -- 2. Buscar categorías contables correspondientes
+    -- Buscar categoría contable
     select id into v_categoria_ventas_id from public.categorias_caja where nombre = 'VENTAS' limit 1;
-    select id into v_categoria_compras_id from public.categorias_caja where nombre = 'COMPRAS' limit 1;
 
     if new.tipo = 'Venta' then
-        -- La ganancia neta es la diferencia entre el monto de venta y el costo
         new.ganancia_neta := new.monto - v_precio_compra;
         
-        -- Cambiar el estado del vehículo a Vendido
         update public.vehiculos
         set estado = 'Vendido'
         where id = new.vehiculo_id;
 
-        -- Registrar el Ingreso en movimientos_caja
         if v_categoria_ventas_id is not null then
-            insert into public.movimientos_caja (tipo, monto, categoria_id, descripcion)
+            insert into public.movimientos_caja (tipo_movimiento, monto, categoria_id, descripcion)
             values (
-                'Ingreso',
+                'INGRESO',
                 new.monto,
                 v_categoria_ventas_id,
                 'Ingreso por venta automática: ' || v_marca || ' ' || v_modelo || ' (Transacción ID: ' || new.id || ')'
             );
         end if;
-
-    elsif new.tipo = 'Compra' then
-        new.ganancia_neta := 0;
-        
-        -- Cambiar el estado del vehículo a Disponible
-        update public.vehiculos
-        set estado = 'Disponible'
-        where id = new.vehiculo_id;
-
-        -- Registrar el Egreso en movimientos_caja
-        if v_categoria_compras_id is not null then
-            insert into public.movimientos_caja (tipo, monto, categoria_id, descripcion)
-            values (
-                'Egreso',
-                new.monto,
-                v_categoria_compras_id,
-                'Egreso por compra automática: ' || v_marca || ' ' || v_modelo || ' (Transacción ID: ' || new.id || ')'
-            );
-        end if;
+    else
+        raise exception 'La transacción de tipo % no está permitida. El ingreso de stock se debe hacer únicamente desde el módulo de Inventario.', new.tipo;
     end if;
 
     return new;

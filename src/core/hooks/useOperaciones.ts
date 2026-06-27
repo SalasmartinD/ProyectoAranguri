@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/core/services/supabase';
 import { Transaccion, TransaccionInput } from '../types/transaccion';
-import { VehiculoInput } from '../types/vehiculo';
 
 export function useOperaciones() {
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
@@ -31,63 +30,6 @@ export function useOperaciones() {
       setLoading(false);
     }
   }, []);
-
-  /**
-   * Registra la COMPRA de un vehículo:
-   * 1. Da de alta el auto en el stock.
-   * 2. Registra la transacción de compra.
-   */
-  const registrarCompra = useCallback(async (
-    vehiculoInput: VehiculoInput,
-    empleadoId: string
-  ): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Asegurarse de que el estado inicial sea "Disponible"
-      const vehiculoData = {
-        ...vehiculoInput,
-        estado: 'Disponible' as const,
-      };
-
-      // 1. Insertar el vehículo en Supabase
-      const { data: nuevoVehiculo, error: vehiculoErr } = await supabase
-        .from('vehiculos')
-        .insert([vehiculoData])
-        .select()
-        .single();
-
-      if (vehiculoErr) throw vehiculoErr;
-      if (!nuevoVehiculo) throw new Error('No se pudo registrar el vehículo.');
-
-      // 2. Registrar la transacción de compra
-      const transaccionCompra: TransaccionInput = {
-        tipo: 'Compra',
-        vehiculo_id: nuevoVehiculo.id,
-        empleado_id: empleadoId,
-        monto: nuevoVehiculo.precio_compra, // El monto es el costo de compra
-      };
-
-      const { error: txErr } = await supabase
-        .from('transacciones')
-        .insert([transaccionCompra]);
-
-      if (txErr) {
-        // Rollback manual del vehículo si falla la transacción
-        await supabase.from('vehiculos').delete().eq('id', nuevoVehiculo.id);
-        throw txErr;
-      }
-
-      await fetchTransacciones();
-      return true;
-    } catch (err: unknown) {
-      console.error('Error al registrar compra:', err);
-      setError(err instanceof Error ? err.message : 'Error al registrar la transacción de compra.');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchTransacciones]);
 
   /**
    * Registra la VENTA de un vehículo:
@@ -132,7 +74,6 @@ export function useOperaciones() {
     loading,
     error,
     fetchTransacciones,
-    registrarCompra,
     registrarVenta,
   };
 }
