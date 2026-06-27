@@ -4,6 +4,16 @@ export interface RemuneracionInput {
   porcentaje_comision?: number | string | null;
 }
 
+export interface EmpleadoContrato {
+  tipo_remuneracion: 'FIJO' | 'COMISION' | 'MIXTO';
+  sueldo_fijo?: number | string | null;
+  porcentaje_comision?: number | string | null;
+}
+
+export interface VentaVehiculo {
+  monto: number | string;
+}
+
 /**
  * Calcula el salario del mes basándose en el tipo de remuneración y las ventas totales.
  * Asegura que no se generen valores nulos o NaN.
@@ -25,4 +35,20 @@ export function calcularSueldo(empleado: RemuneracionInput, totalVentas: number)
   }
 
   return isNaN(totalLiquidado) || totalLiquidado < 0 ? 0 : totalLiquidado;
+}
+
+/**
+ * Calcula la liquidación de haberes a partir de un listado de ventas de forma segura y resiliente.
+ */
+export function calcularLiquidacion(
+  empleado: EmpleadoContrato,
+  ventas: VentaVehiculo[] | null | undefined
+): number {
+  const totalVentas = (ventas || []).reduce((sum, s) => {
+    if (!s || s.monto === undefined || s.monto === null) return sum;
+    const val = Number(s.monto);
+    return sum + (isNaN(val) || val < 0 ? 0 : val);
+  }, 0);
+
+  return calcularSueldo(empleado, totalVentas);
 }
