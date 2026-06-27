@@ -112,10 +112,10 @@ export function ImageUploader({
         </div>
 
         <div className="mt-3 text-xs">
-          <span className="font-bold text-slate-700">Haz clic para subir</span>
-          <span className="text-slate-400"> o arrastra y suelta</span>
+          <span className="font-bold text-slate-700">Hacé clic para subir</span>
+          <span className="text-slate-400"> o arrastrá y soltá</span>
         </div>
-        <p className="mt-1 text-[10px] text-slate-400">PNG, JPG o WEBP (puedes seleccionar varias)</p>
+        <p className="mt-1 text-[10px] text-slate-400">PNG, JPG o WEBP (podés seleccionar varias)</p>
       </div>
 
       {/* Grid of Previews (thumbnails) */}
