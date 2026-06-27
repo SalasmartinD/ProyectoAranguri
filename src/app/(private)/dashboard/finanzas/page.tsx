@@ -105,7 +105,7 @@ export default function FinanzasPage() {
           <p className="text-slate-500 text-sm">Control de flujo de caja, balance mensual y liquidación de haberes.</p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
             <select
               value={mes}

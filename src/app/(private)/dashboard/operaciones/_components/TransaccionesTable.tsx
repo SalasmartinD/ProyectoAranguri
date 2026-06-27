@@ -25,13 +25,13 @@ interface TransaccionesTableProps {
 
 export function TransaccionesTable({ transacciones, txLoading }: TransaccionesTableProps) {
   return (
-    <div className="lg:col-span-2 space-y-4">
+    <div className="lg:col-span-2 space-y-4 min-w-0">
       <div className="flex items-center gap-2">
         <FileText className="h-5 w-5 text-indigo-600" />
         <h2 className="text-lg font-bold text-slate-900">Historial Completo de Operaciones</h2>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-w-0">
         {txLoading && transacciones.length === 0 ? (
           <div className="py-20 text-center text-slate-400 text-xs">
             Cargando historial de transacciones...

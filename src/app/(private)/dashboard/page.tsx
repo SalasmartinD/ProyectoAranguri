@@ -98,7 +98,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-w-0">
         <div className="flex items-center justify-between border-b border-slate-100 p-5">
           <div className="flex items-center gap-2">
             <FileText className="h-4.5 w-4.5 text-indigo-600" />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SlidersHorizontal, Search } from 'lucide-react';
 
 interface CatalogoFiltrosProps {
@@ -40,14 +40,26 @@ export function CatalogoFiltros({
   maxAnio,
   setMaxAnio,
 }: CatalogoFiltrosProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 animate-in fade-in duration-200">
-      <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-        <SlidersHorizontal className="h-4.5 w-4.5 text-indigo-600" />
-        <h2 className="font-bold text-slate-800 text-sm">Filtros Avanzados</h2>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between border-b border-slate-100 pb-3 cursor-pointer md:cursor-default select-none"
+      >
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4.5 w-4.5 text-indigo-600" />
+          <h2 className="font-bold text-slate-800 text-sm">Filtros de Búsqueda</h2>
+        </div>
+        <span className="text-xs text-indigo-600 font-bold md:hidden">
+          {isOpen ? 'Ocultar filtros ↑' : 'Filtrar catálogo ↓'}
+        </span>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div className={`grid gap-4 sm:grid-cols-2 md:grid-cols-4 transition-all duration-300 ${
+        isOpen ? 'block' : 'hidden md:grid'
+      }`}>
         {/* Búsqueda de texto */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-500 block">Buscar</label>
@@ -116,7 +128,9 @@ export function CatalogoFiltros({
       </div>
 
       {/* Rangos de Precio y Año */}
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 pt-2 border-t border-slate-100">
+      <div className={`grid gap-4 sm:grid-cols-2 md:grid-cols-4 pt-2 border-t border-slate-100 transition-all duration-300 ${
+        isOpen ? 'block' : 'hidden md:grid'
+      }`}>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-500 block">Precio Mínimo ($)</label>
           <input
@@ -151,7 +165,7 @@ export function CatalogoFiltros({
           <label className="text-xs font-semibold text-slate-500 block">Año Máximo</label>
           <input
             type="number"
-            placeholder="Ej: 2015"
+            placeholder="Ej: 2024"
             value={maxAnio}
             onChange={(e) => setMaxAnio(e.target.value ? Number(e.target.value) : '')}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-shadow focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

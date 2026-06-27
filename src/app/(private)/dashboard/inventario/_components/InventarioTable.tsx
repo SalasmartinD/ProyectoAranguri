@@ -22,7 +22,7 @@ export function InventarioTable({
   handleDelete,
 }: InventarioTableProps) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-w-0">
       <div className="p-5 border-b border-slate-100 flex items-center">
         <div className="relative max-w-md w-full">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
