@@ -68,6 +68,7 @@ export function useFinanzas() {
 
   // Estados de datos financieros
   const [movimientos, setMovimientos] = useState<MovimientoCaja[]>([]);
+  const [liquidacionesPeriodo, setLiquidacionesPeriodo] = useState<MovimientoCaja[]>([]);
   const [ventas, setVentas] = useState<TransaccionPeriodo[]>([]);
   const [compras, setCompras] = useState<TransaccionPeriodo[]>([]);
   const [loadingFinanzas, setLoadingFinanzas] = useState<boolean>(false);
@@ -122,6 +123,16 @@ export function useFinanzas() {
 
       if (movesErr) throw movesErr;
       setMovimientos(movesData || []);
+
+      // 3. Obtener todas las liquidaciones registradas para el período seleccionado (sin importar la fecha física del movimiento)
+      const periodStr = `Período ${mes.toString().padStart(2, '0')}/${anio}`;
+      const { data: liqData, error: liqErr } = await supabase
+        .from('movimientos_caja')
+        .select('*, categorias_caja(nombre)')
+        .like('descripcion', `%${periodStr}%`);
+
+      if (liqErr) throw liqErr;
+      setLiquidacionesPeriodo(liqData || []);
     } catch (err: unknown) {
       console.error('Error fetching finanzas:', err);
       setErrorFinanzas(err instanceof Error ? err.message : 'Error al obtener datos financieros del período.');
@@ -153,14 +164,12 @@ export function useFinanzas() {
   // Auxiliar para verificar si un empleado ya fue liquidado en este período
   const isSueldoLiquidado = useCallback((empleadoId: string) => {
     const searchDesc = `ID: ${empleadoId}`;
-    const periodStr = `Período ${mes.toString().padStart(2, '0')}/${anio}`;
-    return movimientos.some(
+    return liquidacionesPeriodo.some(
       (m) =>
         m.categorias_caja?.nombre === 'SUELDOS_Y_COMISIONES' &&
-        m.descripcion?.includes(searchDesc) &&
-        m.descripcion?.includes(periodStr)
+        m.descripcion?.includes(searchDesc)
     );
-  }, [movimientos, mes, anio]);
+  }, [liquidacionesPeriodo]);
 
   // Registrar pago de sueldo
   const handleLiquidarSueldo = useCallback(async (empleadoId: string, montoFinal: number) => {

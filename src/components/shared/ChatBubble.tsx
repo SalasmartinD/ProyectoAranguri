@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Sparkles, AlertCircle } from 'lucide-react';
 import { Message } from '@/core/types/chat';
+import { MarkdownRenderer } from '@/core/components/MarkdownRenderer';
 
 // Definir constante inicial estática fuera del componente para mantener la pureza
 const INITIAL_MESSAGES: Message[] = [
@@ -142,7 +143,11 @@ export default function ChatBubble() {
                       : 'bg-slate-100 text-slate-800 rounded-bl-none'
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === 'user' ? (
+                    msg.content
+                  ) : (
+                    <MarkdownRenderer content={msg.content} />
+                  )}
                 </div>
               </div>
             ))}

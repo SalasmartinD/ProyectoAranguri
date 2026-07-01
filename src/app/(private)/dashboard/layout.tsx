@@ -157,7 +157,7 @@ export default function DashboardLayout({
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden shadow-sm">
           <div className="flex items-center gap-2">
             <Car className="h-5 w-5 text-indigo-600" />
-            <span className="font-bold text-sm text-slate-800">Aranguri Admin</span>
+            <span className="font-bold text-sm text-slate-800">Salas Admin</span>
           </div>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -187,7 +187,7 @@ export default function DashboardLayout({
             <div className="flex h-16 items-center justify-between border-b border-slate-800 mb-6 -mt-2">
               <div className="flex items-center gap-2">
                 <Car className="h-5 w-5 text-indigo-400" />
-                <span className="font-bold text-sm text-white">Aranguri Admin</span>
+                <span className="font-bold text-sm text-white">Salas Admin</span>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
