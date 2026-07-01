@@ -76,10 +76,13 @@ export async function POST(request: Request) {
     }
 
     if (empleado.fecha_baja !== null) {
-      return NextResponse.json(
-        { error: 'Operación rechazada: el empleado seleccionado está dado de baja y no puede recibir nuevas liquidaciones.' },
-        { status: 400 }
-      );
+      const bajaPeriod = getPeriodValue(empleado.fecha_baja);
+      if (targetPeriod > bajaPeriod) {
+        return NextResponse.json(
+          { error: 'Operación rechazada: el empleado seleccionado está dado de baja y no puede recibir liquidaciones para períodos posteriores a su baja.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Buscar la categoría 'SUELDOS_Y_COMISIONES' dinámicamente

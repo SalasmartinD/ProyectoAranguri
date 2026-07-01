@@ -126,7 +126,7 @@ Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y
 
 Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
 
-1. **Motor de Liquidación de Haberes** (`src/app/api/finanzas/liquidar-sueldo/liquidacion.test.ts`):
+1. Motor de Liquidación y Finanzas (`src/core/utils/finance.test.ts`):
    - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
    - **Remuneración por Comisión**: Valida la aplicación estricta del porcentaje sobre el total de ventas.
    - **Remuneración Mixta**: Comprueba el cálculo aditivo de básico + comisiones.
@@ -174,22 +174,31 @@ graph TD
 
 ## 8. Decisiones de Ingeniería y Buenas Prácticas
 
-### 8.1. Refactorización Arquitectónica y Desguace de Componentes
-A medida que el panel de finanzas, catálogo y operaciones crecieron, los archivos `page.tsx` acumularon interfaces, estados complejos y llamadas a base de datos (alcanzando hasta 700 líneas). Para respetar el **Principio de Responsabilidad Única (SRP)**, apliqué una refactorización estructural:
-*   **Presentación Pura (`_components/`)**: Se extrajeron formularios, tablas y vistas a componentes visuales puros e independientes.
-*   **Lógica Desacoplada (`_hooks/`)**: Se centralizaron estados de carga, manejo de inputs, subidas de archivos y promesas asíncronas en Custom Hooks dedicados (ej: `useFinanzas.ts`, `useInventario.ts`, `useOperacionesForm.ts`).
-*   **Orquestación Minimalista**: Reduje los archivos `page.tsx` principales a menos de **100 líneas**, actuando únicamente como conectores livianos.
+### 8.1. Desacoplamiento Estructural: Separación de Responsabilidades (SoC)
+A medida que las pantallas de finanzas, catálogo y operaciones sumaron lógica de negocio, los archivos `page.tsx` se convirtieron en "Anti-patrones de Supercomponentes", acumulando interfaces, control de estados y consultas de red (alcanzando picos de 700 líneas). Para alinear lo desarrollado con el **Principio de Responsabilidad Única (SRP)**, implementé una refactorización de arquitectura limpia:
+* **Capa de UI Pura (`_components/`)**: Aislé formularios, gráficos de KPI y grillas en componentes atómicos de presentación independientes, optimizando los ciclos de re-renderizado.
+* **Capa de Estado y Efectos (`_hooks/`)**: Centralicé la lógica asíncrona, mutaciones a Supabase, validaciones y manejo de formularios en Custom Hooks especializados (ej: `useFinanzas.ts`, `useInventario.ts`).
+* **Orquestación Minimalista**: Reduje los archivos `page.tsx` principales a menos de **100 líneas**, delegando la lógica a los hooks y actuando únicamente como conectores del layout, lo que elevó drásticamente la mantenibilidad y la testabilidad aislada del código.
 
 ### 8.2. Doble Escudo de Seguridad: Middleware RBAC y Sanitización en Runtime
 Implementé una estrategia de seguridad por capas para proteger las rutas y mitigar inyecciones de código:
-*   **Middleware Perimetral (RBAC)**: Desarrollé `src/middleware.ts` utilizando `@supabase/ssr` (`createServerClient`) que intercepta peticiones HTTP. Valida el rol del usuario (`rol` / `role`) desde el JWT y bloquea accesos del rol `Vendedor` a las vistas administrativas/financieras (`/dashboard/finanzas`, `/dashboard/configuracion`), redirigiéndolos de forma segura a `/dashboard/inventario`.
-*   **Sanitización de Inputs (Zod + RegExp)**: Creé `sanitizer.ts` para desinfectar entradas de texto libre (descripciones u observaciones de caja) de ataques XSS o HTML Injection. La función remueve scripts, event handlers (`onmouseover`, `onclick`) y codifica corchetes angulares. Está integrada directamente al pipeline de validación de **Zod** mediante transformaciones (`z.string().transform()`) antes de que toquen la base de datos.
+* **Middleware Perimetral (RBAC)**: Desarrollé `src/middleware.ts` utilizando `@supabase/ssr` (`createServerClient`) que intercepta peticiones HTTP. Valida el rol del usuario (`rol` / `role`) desde el JWT y bloquea accesos del rol `Vendedor` a las vistas administrativas/financieras (`/dashboard/finanzas`, `/dashboard/configuracion`), redirigiéndolos de forma segura a `/dashboard/inventario`.
+* **Sanitización de Inputs (Zod + RegExp)**: Creé `sanitizer.ts` para desinfectar entradas de texto libre (descripciones u observaciones de caja) de ataques XSS o HTML Injection. La función remueve scripts, event handlers (`onmouseover`, `onclick`) y codifica corchetes angulares. Está integrada directamente al pipeline de validación de **Zod** mediante transformaciones (`z.string().transform()`) antes de que toquen la base de datos.
 
 ### 8.3. Sistema de Auditoría Inmutable (Caja Negra Serverless)
 Debido a la arquitectura efímera (stateless) de Vercel que impide registrar logs en archivos físicos locales, diseñé una telemetría centralizada en Supabase:
-*   **Persistencia Segura (`public.sistema_logs`)**: Tabla protegida con políticas RLS de lectura/escritura nulas para clientes externos.
-*   **Canalización de Escribas en Backend**: Las inserciones se administran exclusivamente desde el backend a través de la Service Role Key.
-*   **Payload Dinámico**: Registra de forma inmutable niveles de severidad (`INFO`, `WARN`, `ERROR`, `CRITICAL`), contextos lógicos (`AUTH`, `API_GEMINI`, `FINANZAS`) y payloads dinámicos mediante campos `JSONB`, registrando desde caídas imprevistas hasta auditorías operativas.
+* **Persistencia Segura (`public.sistema_logs`)**: Tabla protegida con políticas RLS de lectura/escritura nulas para clientes externos.
+* **Canalización de Escribas en Backend**: Las inserciones se administran exclusivamente desde el backend a través de la Service Role Key.
+* **Payload Dinámico**: Registra de forma inmutable niveles de severidad (`INFO`, `WARN`, `ERROR`, `CRITICAL`), contextos lógicos (`AUTH`, `API_GEMINI`, `FINANZAS`) y payloads dinámicos mediante campos `JSONB`, registrando desde caídas imprevistas hasta auditorías operativas.
+
+### 8.4. Resolución de Race Conditions y Congelamiento de Caché en Autenticación
+Durante las fases de pruebas de carga en el entorno de producción, identifiqué un comportamiento errático: al ingresar credenciales válidas, el cliente detenía el estado de carga pero permanecía retenido en la vista de `/login`, requiriendo una recarga forzada (F5) para ingresar al panel privado. 
+
+Diseñé un diagnóstico de infraestructura y determiné una falla concurrente por dos variables:
+1.  **I/O Latency en Cookies**: El enrutador (`router.push`) ejecutaba la redirección milisegundos antes de que el navegador persistiera físicamente los tokens en el almacenamiento de cookies, provocando que el `middleware.ts` interceptara una petición huérfana y la rebotara por seguridad.
+2.  **Router Cache Invalidation**: El cliente de Next.js congelaba el estado de renderizado del lado del cliente debido a su política de optimización de rutas en caché.
+
+**Solución Implementada**: Re-arquitecturé el handler de sumisión inyectando una secuencia determinista: ejecuté una invalidación y refresco total de caché (`router.refresh()`) inmediatamente tras la promesa resuelta de Supabase Auth, forzando la destrucción del caché en memoria del navegador. En paralelo, optimicé el `middleware.ts` para mutar y propagar activamente las cookies validadas hacia los Server Components en el primer salto de red (`NextResponse.next({ request })`), erradicando por completo el comportamiento asíncrono errático.
 
 ---
 
@@ -242,7 +251,7 @@ GEMINI_API_KEY=tu-api-key-de-gemini
 
 ### Paso 3: Inicialización de la Base de Datos (Supabase)
 
-Para garantizar un entorno seguro y con integridad referencial a prueba de fallos contables, diseñé un esquema de base de datos relacional y políticas de seguridad estrictas. El script de inicialización completo se encuentra en el repositorio en [supabase/migrations/schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql).
+Para garantizar un entorno seguro y con integridad referencial a prueba de fallos contables, diseñé un esquema de base de datos relacional y políticas de seguridad estrictas. La inicialización y estructuración de la base de datos se realiza aplicando secuencialmente los scripts de migración ubicados en el directorio `supabase/migrations/`.
 
 #### Diccionario de Esquema y Relaciones Críticas
 
@@ -285,11 +294,7 @@ USING (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_met
 #### Pasos para la Inicialización:
 1. **Ingresá a tu Consola de Supabase:** Andá a la sección **SQL Editor** en el panel lateral izquierdo.
 2. **Creá un Nuevo Query:** Hacé clic en "+ New query".
-3. **Ejecutá los Scripts de Migración en Orden:** Copiá y ejecutá el contenido de los archivos de migración ubicados en el directorio `supabase/migrations/` en el siguiente orden secuencial para habilitar las tablas, políticas de seguridad RLS y disparadores:
-   * **1° -** [schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) (Estructura base, RLS perimetral y tablas del core).
-   * **2° -** [logs_schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/logs_schema.sql) (Esquema de auditoría centralizado para Vercel).
-   * **3° -** [refactor_caja_stock.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/refactor_caja_stock.sql) (Unificación de stock con egreso en caja automático y validaciones de baja lógica).
-   * **4° -** [permissions_fix.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/permissions_fix.sql) (Solución de permisos de ejecución para funciones RLS de roles).
+3. **Ejecutá el Script de Migración:** Copiá y ejecutá el contenido del archivo de migración único ubicado en [schema.sql](file:///e:/ProyectoAranguri/concesionaria/supabase/migrations/schema.sql) para habilitar las tablas, categorías contables iniciales, triggers de automatización, políticas de seguridad RLS y permisos.
 4. **Creá el Bucket de Storage:** Navegá a la pestaña **Storage**, creá un bucket público llamado `vehiculos` y definí políticas de lectura pública y escritura exclusiva para usuarios autenticados.
 
 ---
@@ -307,4 +312,4 @@ Una vez configurado todo el entorno y la base de datos, podés arrancar el servi
     ```bash
     npm run test
     ```
-    Esto ejecutará los **18 tests automatizados** del motor financiero, parseador de filtros, sanitización de inputs y logger de forma instantánea.
+    Esto ejecutará los **25 tests automatizados** del motor financiero, parseador de filtros, sanitización de inputs y logger de forma instantánea.
