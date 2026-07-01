@@ -1,36 +1,47 @@
 import React, { useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { CategoriaCaja } from '../_hooks/useFinanzas';
+import { useMovimientoManual } from '../_hooks/useMovimientoManual';
 
 interface MovimientoManualModalProps {
   setIsModalOpen: (open: boolean) => void;
-  manualMonto: string;
-  setManualMonto: (monto: string) => void;
-  manualTipo: 'INGRESO' | 'EGRESO';
-  setManualTipo: (tipo: 'INGRESO' | 'EGRESO') => void;
-  manualCategoriaId: string;
-  setManualCategoriaId: (id: string) => void;
-  manualDescripcion: string;
-  setManualDescripcion: (desc: string) => void;
-  categoriasFiltradas: CategoriaCaja[];
-  isSavingManual: boolean;
-  handleSaveManual: (e: React.FormEvent) => Promise<void>;
+  onSuccess: () => Promise<void>;
 }
 
 export function MovimientoManualModal({
   setIsModalOpen,
-  manualMonto,
-  setManualMonto,
-  manualTipo,
-  setManualTipo,
-  manualCategoriaId,
-  setManualCategoriaId,
-  manualDescripcion,
-  setManualDescripcion,
-  categoriasFiltradas,
-  isSavingManual,
-  handleSaveManual,
+  onSuccess,
 }: MovimientoManualModalProps) {
+  const {
+    manualMonto,
+    setManualMonto,
+    manualTipo,
+    setManualTipo,
+    manualCategoriaId,
+    setManualCategoriaId,
+    manualDescripcion,
+    setManualDescripcion,
+    isSavingManual,
+    categoriasFiltradas,
+    fetchCategoriasMaster,
+    handleSaveManual,
+  } = useMovimientoManual(async () => {
+    await onSuccess();
+    setIsModalOpen(false);
+  });
+
+  // Cargar categorías maestras al montar el modal
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      fetchCategoriasMaster();
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, [fetchCategoriasMaster]);
 
   // Sincronizar categoría por defecto al cambiar el tipo o la lista filtrada
   useEffect(() => {

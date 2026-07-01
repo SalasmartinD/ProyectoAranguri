@@ -1,6 +1,6 @@
 import React from 'react';
 import { CreditCard, Loader2, CheckCircle } from 'lucide-react';
-import { formatCurrency } from '@/core/utils/finance';
+import { formatCurrency, getPeriodValue } from '@/core/utils/finance';
 
 interface Empleado {
   id: string;
@@ -38,18 +38,7 @@ interface LiquidacionPanelProps {
   anio: number;
 }
 
-function getPeriodValue(dateStr: string): number {
-  if (dateStr.includes('T')) {
-    const d = new Date(dateStr);
-    return d.getUTCFullYear() * 12 + d.getUTCMonth();
-  }
-  const parts = dateStr.split('-');
-  if (parts.length >= 2) {
-    return parseInt(parts[0], 10) * 12 + (parseInt(parts[1], 10) - 1);
-  }
-  const d = new Date(dateStr);
-  return d.getUTCFullYear() * 12 + d.getUTCMonth();
-}
+
 
 export function LiquidacionPanel({
   empleados,

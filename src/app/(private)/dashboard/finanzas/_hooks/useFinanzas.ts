@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/core/services/supabase';
 import { useEmpleados } from '@/core/hooks/useEmpleados';
+import { getPeriodValue } from '@/core/utils/finance';
 
 export interface MovimientoCaja {
   id: string;
@@ -10,7 +11,7 @@ export interface MovimientoCaja {
   categoria_id: string;
   categorias_caja?: {
     nombre: string;
-  };
+  } | null;
   descripcion: string;
 }
 
@@ -28,18 +29,7 @@ export interface TransaccionPeriodo {
   tipo: 'Compra' | 'Venta';
 }
 
-function getPeriodValue(dateStr: string): number {
-  if (dateStr.includes('T')) {
-    const d = new Date(dateStr);
-    return d.getUTCFullYear() * 12 + d.getUTCMonth();
-  }
-  const parts = dateStr.split('-');
-  if (parts.length >= 2) {
-    return parseInt(parts[0], 10) * 12 + (parseInt(parts[1], 10) - 1);
-  }
-  const d = new Date(dateStr);
-  return d.getUTCFullYear() * 12 + d.getUTCMonth();
-}
+
 
 export function useFinanzas() {
   const { empleados, loading: loadingEmpleados, error: errorEmpleados, fetchEmpleados } = useEmpleados();
@@ -79,16 +69,7 @@ export function useFinanzas() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [customLiquidaciones, setCustomLiquidaciones] = useState<Record<string, number>>({});
 
-  // Estado para modal de movimiento manual
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [manualMonto, setManualMonto] = useState<string>('');
-  const [manualTipo, setManualTipo] = useState<'INGRESO' | 'EGRESO'>('EGRESO');
-  const [manualCategoriaId, setManualCategoriaId] = useState<string>('');
-  const [manualDescripcion, setManualDescripcion] = useState('');
-  const [isSavingManual, setIsSavingManual] = useState(false);
 
-  // Categorías de caja cargadas desde la BD
-  const [categoriasMaster, setCategoriasMaster] = useState<CategoriaCaja[]>([]);
 
   // Cargar datos
   const fetchDatosFinancieros = useCallback(async () => {
@@ -141,25 +122,7 @@ export function useFinanzas() {
     }
   }, [mes, anio]);
 
-  // Cargar categorías maestras
-  const fetchCategoriasMaster = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categorias_caja')
-        .select('*')
-        .order('nombre', { ascending: true });
-      if (error) throw error;
-      setCategoriasMaster(data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  }, []);
 
-  const categoriasFiltradas = useMemo(() => {
-    return categoriasMaster.filter(
-      (cat) => cat.tipo_permitido === 'AMBOS' || cat.tipo_permitido === manualTipo
-    );
-  }, [categoriasMaster, manualTipo]);
 
   // Auxiliar para verificar si un empleado ya fue liquidado en este período
   const isSueldoLiquidado = useCallback((empleadoId: string) => {
@@ -206,43 +169,7 @@ export function useFinanzas() {
     }
   }, [mes, anio, fetchDatosFinancieros]);
 
-  // Guardar movimiento manual
-  const handleSaveManual = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualMonto || Number(manualMonto) <= 0 || !manualDescripcion.trim() || !manualCategoriaId) {
-      alert('Por favor ingresa un monto válido, una categoría y una descripción.');
-      return;
-    }
 
-    setIsSavingManual(true);
-    setErrorFinanzas(null);
-    try {
-      const { error: dbErr } = await supabase
-        .from('movimientos_caja')
-        .insert([
-          {
-            monto: Number(manualMonto),
-            tipo_movimiento: manualTipo,
-            categoria_id: manualCategoriaId,
-            descripcion: manualDescripcion.trim(),
-          },
-        ]);
-
-      if (dbErr) throw dbErr;
-
-      setIsModalOpen(false);
-      setManualMonto('');
-      setManualDescripcion('');
-      setSuccessMessage('Movimiento manual registrado exitosamente.');
-      await fetchDatosFinancieros();
-    } catch (err: unknown) {
-      console.error('Error detallado:', err);
-      const errMsg = err instanceof Error ? err.message : 'Error de base de datos.';
-      setErrorFinanzas(errMsg);
-    } finally {
-      setIsSavingManual(false);
-    }
-  }, [manualMonto, manualTipo, manualCategoriaId, manualDescripcion, fetchDatosFinancieros]);
 
   // Totales calculados en memoria para el mes
   const metricasCaja = useMemo(() => {
@@ -281,8 +208,6 @@ export function useFinanzas() {
     compras,
     loadingFinanzas,
     errorFinanzas,
-    categoriasMaster,
-    categoriasFiltradas,
     metricasCaja,
     
     // Controles de fecha
@@ -300,23 +225,8 @@ export function useFinanzas() {
     isSueldoLiquidado,
     handleLiquidarSueldo,
     
-    // Movimientos manuales
-    isModalOpen,
-    setIsModalOpen,
-    manualMonto,
-    setManualMonto,
-    manualTipo,
-    setManualTipo,
-    manualCategoriaId,
-    setManualCategoriaId,
-    manualDescripcion,
-    setManualDescripcion,
-    isSavingManual,
-    handleSaveManual,
-    
     // Carga explicita
     fetchDatosFinancieros,
-    fetchCategoriasMaster,
     fetchEmpleados,
   };
 }
