@@ -275,15 +275,16 @@ A continuación, te detallo las tablas operativas y las restricciones de base de
 
 #### Automatización Mediante Funciones y Triggers (PL/pgSQL)
 
-El motor de base de datos automatiza de forma transaccional la sincronización de inventario y caja mediante triggers escritos en PL/pgSQL:
+El motor de base de datos automatiza de forma transaccional la sincronización de inventario y caja mediante triggers escritos en PL/pgSQL, garantizando consistencia absoluta y eliminando la necesidad de endpoints manuales para estas acciones:
 
 *   **Sincronización Automática de Stock (`trg_procesar_operacion_transaccional`):**
-    Al insertar una venta en la tabla `transacciones`, el trigger ejecuta `procesar_operacion_transaccional()`, el cual actualiza el estado del vehículo en `vehiculos` a `'Vendido'` y calcula la ganancia neta en la misma transacción:
+    Al insertar una transacción de compra o venta en la tabla `transacciones`, el trigger ejecuta `procesar_operacion_transaccional()`, el cual actualiza de forma inmediata y atómica el estado del vehículo en la tabla `vehiculos` (a `'Vendido'` en caso de ventas o `'Disponible'` en caso de compras) y calcula la ganancia neta en la misma transacción:
     ```sql
     update public.vehiculos set estado = 'Vendido' where id = new.vehiculo_id;
     ```
-*   **Imputación en Caja Directa:**
-    El mismo trigger detecta si la operación es de tipo `'Venta'` o `'Compra'` y crea automáticamente la fila correspondiente en `movimientos_caja` (Ingreso o Egreso) impactando el libro contable de manera transaccional, evitando inconsistencias entre ventas y caja física.
+*   **Imputación Contable Atómica en Caja:**
+    El mismo trigger en la base de datos detecta si la transacción es de tipo `'Venta'` (Ingreso) o `'Compra'` (Egreso) y crea automáticamente la fila correspondiente en `movimientos_caja`. **El egreso en caja por la compra de vehículos se ejecuta de forma 100% atómica mediante este Trigger de PL/pgSQL y no por un endpoint manual en el servidor**, asegurando que no existan inconsistencias temporales entre el stock físico y el balance contable del ERP.
+
 
 #### Especificación de RLS y Claims del JWT de Supabase
 

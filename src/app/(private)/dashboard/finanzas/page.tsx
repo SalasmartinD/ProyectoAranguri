@@ -10,6 +10,7 @@ import { MovimientoManualModal } from './_components/MovimientoManualModal';
 import { FiltrosReporteCaja } from './_components/FiltrosReporteCaja';
 
 export default function FinanzasPage() {
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const {
     empleados,
     loadingEmpleados,
@@ -18,7 +19,6 @@ export default function FinanzasPage() {
     ventas,
     loadingFinanzas,
     errorFinanzas,
-    categoriasFiltradas,
     metricasCaja,
     
     // Controles de fecha
@@ -36,23 +36,8 @@ export default function FinanzasPage() {
     isSueldoLiquidado,
     handleLiquidarSueldo,
     
-    // Movimientos manuales
-    isModalOpen,
-    setIsModalOpen,
-    manualMonto,
-    setManualMonto,
-    manualTipo,
-    setManualTipo,
-    manualCategoriaId,
-    setManualCategoriaId,
-    manualDescripcion,
-    setManualDescripcion,
-    isSavingManual,
-    handleSaveManual,
-    
     // Métodos de carga
     fetchDatosFinancieros,
-    fetchCategoriasMaster,
     fetchEmpleados,
   } = useFinanzas();
 
@@ -64,13 +49,12 @@ export default function FinanzasPage() {
       if (!active) return;
       fetchEmpleados();
       fetchDatosFinancieros();
-      fetchCategoriasMaster();
     };
     load();
     return () => {
       active = false;
     };
-  }, [fetchEmpleados, fetchDatosFinancieros, fetchCategoriasMaster]);
+  }, [fetchEmpleados, fetchDatosFinancieros]);
 
   // Limpiar mensaje de éxito después de unos segundos
   useEffect(() => {
@@ -193,17 +177,7 @@ export default function FinanzasPage() {
       {isModalOpen && (
         <MovimientoManualModal
           setIsModalOpen={setIsModalOpen}
-          manualMonto={manualMonto}
-          setManualMonto={setManualMonto}
-          manualTipo={manualTipo}
-          setManualTipo={setManualTipo}
-          manualCategoriaId={manualCategoriaId}
-          setManualCategoriaId={setManualCategoriaId}
-          manualDescripcion={manualDescripcion}
-          setManualDescripcion={setManualDescripcion}
-          categoriasFiltradas={categoriasFiltradas}
-          isSavingManual={isSavingManual}
-          handleSaveManual={handleSaveManual}
+          onSuccess={fetchDatosFinancieros}
         />
       )}
     </div>

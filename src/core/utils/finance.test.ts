@@ -3,6 +3,7 @@ import {
   calcularSueldo,
   calcularLiquidacion, 
   formatCurrency,
+  getPeriodValue,
   EmpleadoContrato, 
   VentaVehiculo 
 } from './finance';
@@ -107,3 +108,18 @@ describe('Formateo de Moneda (formatCurrency)', () => {
     expect(formatCurrency('150000')).toContain('150');
   });
 });
+
+describe('Valor de Período (getPeriodValue)', () => {
+  it('Debe calcular el valor numérico para fechas ISO (con T)', () => {
+    expect(getPeriodValue('2026-07-01T04:29:25Z')).toBe(2026 * 12 + 6); // Julio es índice 6 (0-indexed)
+  });
+
+  it('Debe calcular el valor numérico para formatos YYYY-MM', () => {
+    expect(getPeriodValue('2026-06')).toBe(2026 * 12 + 5); // Junio es índice 5 (0-indexed)
+  });
+
+  it('Debe calcular el valor numérico para fechas simples', () => {
+    expect(getPeriodValue('2026-05-15')).toBe(2026 * 12 + 4); // Mayo es índice 4 (0-indexed)
+  });
+});
+
