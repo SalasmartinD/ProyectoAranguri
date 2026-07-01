@@ -44,9 +44,9 @@ export function FiltrosReporteCaja() {
       }
 
       exportarMovimientosAExcel(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al exportar reporte:', err);
-      setErrorMsg(err.message || 'Error al obtener datos para el reporte.');
+      setErrorMsg(err instanceof Error ? err.message : 'Error al obtener datos para el reporte.');
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export function FiltrosReporteCaja() {
           <label className="font-bold text-slate-500 block">Tipo de Movimiento</label>
           <select
             value={tipo}
-            onChange={(e) => setTipo(e.target.value as any)}
+            onChange={(e) => setTipo(e.target.value as 'TODOS' | 'INGRESO' | 'EGRESO')}
             className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-bold focus:bg-white focus:border-indigo-500 outline-none"
           >
             <option value="TODOS">Todos</option>
