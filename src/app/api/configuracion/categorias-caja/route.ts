@@ -38,9 +38,9 @@ export async function POST(request: Request) {
     const { data, error } = await supabaseClient
       .from('categorias_caja')
       .insert([
-        { 
-          nombre: cleanNombre, 
-          tipo_permitido 
+        {
+          nombre: cleanNombre,
+          tipo_permitido
         }
       ])
       .select()

@@ -239,7 +239,7 @@ export function useFinanzas() {
   const metricasCaja = useMemo(() => {
     const ingresosVentas = ventas.reduce((acc, v) => acc + Number(v.monto), 0);
     const ingresosOtros = movimientos
-      .filter((m) => m.tipo_movimiento === 'INGRESO')
+      .filter((m) => m.tipo_movimiento === 'INGRESO' && m.categorias_caja?.nombre !== 'VENTAS')
       .reduce((acc, m) => acc + Number(m.monto), 0);
 
     const totalIngresos = ingresosVentas + ingresosOtros;
