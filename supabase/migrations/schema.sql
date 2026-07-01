@@ -9,7 +9,7 @@ create extension if not exists "uuid-ossp";
 -- -------------------------------------------------------------------------
 -- 1. TABLA: roles
 -- -------------------------------------------------------------------------
-create table public.roles (
+create table if not exists public.roles (
     id uuid primary key default gen_random_uuid(),
     nombre text not null unique check (char_length(nombre) >= 2),
     creado_en timestamp with time zone default timezone('utc'::text, now()) not null
@@ -18,7 +18,7 @@ create table public.roles (
 -- -------------------------------------------------------------------------
 -- 2. TABLA: categorias_caja
 -- -------------------------------------------------------------------------
-create table public.categorias_caja (
+create table if not exists public.categorias_caja (
     id uuid primary key default gen_random_uuid(),
     nombre text not null unique check (char_length(nombre) >= 2),
     tipo_permitido text not null check (tipo_permitido in ('INGRESO', 'EGRESO', 'AMBOS')),
@@ -28,7 +28,7 @@ create table public.categorias_caja (
 -- -------------------------------------------------------------------------
 -- 3. TABLA: empleados (Baja Lógica y Relación con Roles)
 -- -------------------------------------------------------------------------
-create table public.empleados (
+create table if not exists public.empleados (
     id uuid primary key default gen_random_uuid(),
     nombre text not null check (char_length(nombre) >= 2),
     rol_id uuid not null references public.roles(id) on delete restrict,
@@ -43,7 +43,7 @@ create table public.empleados (
 -- -------------------------------------------------------------------------
 -- 4. TABLA: vehiculos (Catálogo de Inventario)
 -- -------------------------------------------------------------------------
-create table public.vehiculos (
+create table if not exists public.vehiculos (
     id uuid primary key default gen_random_uuid(),
     marca text not null check (char_length(marca) >= 2),
     modelo text not null check (char_length(modelo) >= 1),
@@ -64,7 +64,7 @@ create table public.vehiculos (
 -- -------------------------------------------------------------------------
 -- 5. TABLA: transacciones (Operaciones de Ventas/Compras)
 -- -------------------------------------------------------------------------
-create table public.transacciones (
+create table if not exists public.transacciones (
     id uuid primary key default gen_random_uuid(),
     tipo text not null check (tipo in ('Compra', 'Venta')),
     vehiculo_id uuid not null references public.vehiculos(id) on delete cascade,
@@ -77,7 +77,7 @@ create table public.transacciones (
 -- -------------------------------------------------------------------------
 -- 6. TABLA: movimientos_caja (Libro Contable Diario)
 -- -------------------------------------------------------------------------
-create table public.movimientos_caja (
+create table if not exists public.movimientos_caja (
     id uuid primary key default gen_random_uuid(),
     tipo_movimiento text not null check (tipo_movimiento in ('INGRESO', 'EGRESO')),
     monto numeric(12, 2) not null check (monto > 0),
@@ -87,12 +87,34 @@ create table public.movimientos_caja (
 );
 
 -- -------------------------------------------------------------------------
+-- 7. TABLA: sistema_logs (Auditoría del Sistema)
+-- -------------------------------------------------------------------------
+create table if not exists public.sistema_logs (
+    id uuid primary key default gen_random_uuid(),
+    timestamp timestamp with time zone default now() not null,
+    nivel text not null constraint chk_logs_nivel check (nivel in ('INFO', 'WARN', 'ERROR', 'CRITICAL')),
+    contexto text not null,
+    mensaje text not null,
+    usuario_id uuid references auth.users(id) on delete set null,
+    metadatos jsonb default '{}'::jsonb not null
+);
+
+-- -------------------------------------------------------------------------
+-- VALORES POR DEFECTO: categorías contables obligatorias
+-- -------------------------------------------------------------------------
+insert into public.categorias_caja (nombre, tipo_permitido)
+values 
+    ('Adquisición de Inventario', 'EGRESO'),
+    ('VENTAS', 'INGRESO')
+on conflict (nombre) do update set tipo_permitido = excluded.tipo_permitido;
+
+-- -------------------------------------------------------------------------
 -- ÍNDICES (Optimización del Catálogo y Reportes Financieros)
 -- -------------------------------------------------------------------------
-create index idx_vehiculos_estado on public.vehiculos(estado);
-create index idx_vehiculos_filtros on public.vehiculos(marca, modelo, anio, precio_venta);
-create index idx_transacciones_fecha on public.transacciones(fecha);
-create index idx_movimientos_caja_fecha on public.movimientos_caja(creado_en);
+create index if not exists idx_vehiculos_estado on public.vehiculos(estado);
+create index if not exists idx_vehiculos_filtros on public.vehiculos(marca, modelo, anio, precio_venta);
+create index if not exists idx_transacciones_fecha on public.transacciones(fecha);
+create index if not exists idx_movimientos_caja_fecha on public.movimientos_caja(fecha);
 
 -- =========================================================================
 -- AUTOMATIZACIÓN DE NEGOCIO: PROCEDIMIENTOS ALMACENADOS Y TRIGGERS
@@ -125,6 +147,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_procesar_adquisicion_vehiculo_automatico on public.vehiculos;
 create trigger trg_procesar_adquisicion_vehiculo_automatico
 after insert on public.vehiculos
 for each row
@@ -182,6 +205,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_procesar_operacion_transaccional on public.transacciones;
 create trigger trg_procesar_operacion_transaccional
 before insert on public.transacciones
 for each row
@@ -196,12 +220,15 @@ alter table public.movimientos_caja enable row level security;
 alter table public.transacciones enable row level security;
 alter table public.categorias_caja enable row level security;
 alter table public.roles enable row level security;
+alter table public.sistema_logs enable row level security;
 
 -- A. Políticas para vehículos
+drop policy if exists "Vehiculos legibles publicamente" on public.vehiculos;
 create policy "Vehiculos legibles publicamente"
 on public.vehiculos for select
 using (true);
 
+drop policy if exists "Admin control total de vehiculos" on public.vehiculos;
 create policy "Admin control total de vehiculos"
 on public.vehiculos for all
 to authenticated
@@ -209,23 +236,27 @@ using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_met
 with check (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
 
 -- B. Políticas para transacciones
+drop policy if exists "Personal puede leer transacciones" on public.transacciones;
 create policy "Personal puede leer transacciones"
 on public.transacciones for select
 to authenticated
 using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') in ('Administrador', 'Vendedor'));
 
+drop policy if exists "Personal puede crear transacciones" on public.transacciones;
 create policy "Personal puede crear transacciones"
 on public.transacciones for insert
 to authenticated
 with check (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') in ('Administrador', 'Vendedor'));
 
 -- C. Políticas de bloqueo total para vendedoras/es en empleados y finanzas (Caja/Liquidaciones)
+drop policy if exists "Admin acceso total a empleados" on public.empleados;
 create policy "Admin acceso total a empleados"
 on public.empleados for all
 to authenticated
 using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador')
 with check (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
 
+drop policy if exists "Admin acceso total a caja y liquidaciones" on public.movimientos_caja;
 create policy "Admin acceso total a caja y liquidaciones"
 on public.movimientos_caja for all
 to authenticated
@@ -233,22 +264,34 @@ using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_met
 with check (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
 
 -- D. Políticas para roles y categorías
+drop policy if exists "Lectura de roles para todo el personal" on public.roles;
 create policy "Lectura de roles para todo el personal"
 on public.roles for select
 to authenticated
 using (true);
 
+drop policy if exists "Admin acceso total a configuracion de roles" on public.roles;
 create policy "Admin acceso total a configuracion de roles"
 on public.roles for all
 to authenticated
 using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
 
+drop policy if exists "Lectura de categorias para todo el personal" on public.categorias_caja;
 create policy "Lectura de categorias para todo el personal"
 on public.categorias_caja for select
 to authenticated
 using (true);
 
+drop policy if exists "Admin acceso total a configuracion de categorias" on public.categorias_caja;
 create policy "Admin acceso total a configuracion de categorias"
 on public.categorias_caja for all
 to authenticated
 using (coalesce(auth.jwt() -> 'user_metadata' ->> 'rol', auth.jwt() -> 'user_metadata' ->> 'role', '') = 'Administrador');
+
+-- =========================================================================
+-- PERMISOS DE EJECUCIÓN EXTRA (GRANT)
+-- =========================================================================
+-- Grant de permisos de ejecución para la función de validación de roles en RLS
+-- Error corregido: permission denied for function auth_get_user_role (Código: 42501)
+grant execute on function public.auth_get_user_role() to authenticated;
+grant execute on function public.auth_get_user_role() to anon;

@@ -36,12 +36,19 @@ export default function LoginPage() {
 
       if (authError) throw authError;
 
+      // Reventar el Router Cache de Next.js para que el Middleware y los Server Components
+      // detecten el nuevo estado de la sesión de inmediato en el próximo salto.
+      router.refresh();
+
+      // Esperar un delay de sincronización determinista de 150ms para asegurar
+      // que el navegador termine de escribir la cookie en disco antes de navegar.
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       router.replace('/dashboard');
     } catch (err: unknown) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Credenciales incorrectas o error de conexión.');
-    } finally {
-      setLoading(false);
+      setLoading(false); // Solo desactivo el cargando si ocurre un error
     }
   };
 

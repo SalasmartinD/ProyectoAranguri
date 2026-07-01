@@ -52,10 +52,14 @@ export function useFinanzas() {
   const empleadosFiltrados = useMemo(() => {
     const selectedPeriod = anio * 12 + (mes - 1);
     return empleados.filter((emp) => {
-      // Excluir estrictamente empleados dados de baja
-      if (emp.fecha_baja !== null) return false;
+      // Excluir si la fecha de baja es estrictamente anterior al período seleccionado
+      if (emp.fecha_baja) {
+        const bajaPeriod = getPeriodValue(emp.fecha_baja);
+        if (selectedPeriod > bajaPeriod) return false;
+      }
 
       const altaStr = emp.fecha_alta || emp.creado_en || emp.fecha_ingreso;
+      if (!altaStr) return true;
       const altaPeriod = getPeriodValue(altaStr);
       
       return selectedPeriod >= altaPeriod;
