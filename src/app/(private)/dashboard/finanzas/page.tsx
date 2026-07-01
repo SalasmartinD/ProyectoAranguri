@@ -7,6 +7,7 @@ import { ResumenTarjetas } from './_components/ResumenTarjetas';
 import { LiquidacionPanel } from './_components/LiquidacionPanel';
 import { LibroDiarioTable } from './_components/LibroDiarioTable';
 import { MovimientoManualModal } from './_components/MovimientoManualModal';
+import { FiltrosReporteCaja } from './_components/FiltrosReporteCaja';
 
 export default function FinanzasPage() {
   const {
@@ -162,6 +163,9 @@ export default function FinanzasPage() {
 
       {/* Tarjetas de Resumen Financiero */}
       <ResumenTarjetas metricasCaja={metricasCaja} />
+
+      {/* Filtros de Exportación Excel */}
+      <FiltrosReporteCaja />
 
       {/* Grid Principal: Liquidación de Sueldos y Libro Diario */}
       <div className="grid gap-6 lg:grid-cols-3">

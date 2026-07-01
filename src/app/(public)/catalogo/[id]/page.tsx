@@ -6,6 +6,7 @@ import { supabase } from '@/core/services/supabase';
 import { Vehiculo } from '@/core/types/vehiculo';
 import { ArrowLeft, Calendar, Gauge, MessageSquare, ShieldCheck, AlertCircle, BadgeCheck, Car, Fuel, Sliders, Cpu } from 'lucide-react';
 import Link from 'next/link';
+import { MarkdownRenderer } from '@/core/components/MarkdownRenderer';
 
 const formatTipo = (t: string) => {
   const map: Record<string, string> = {
@@ -270,9 +271,7 @@ export default function DetalleVehiculoPage({ params }: PageProps) {
       {vehiculo.descripcion && (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-3.5 animate-in fade-in duration-300">
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">Descripción y Detalles Destacados</h2>
-          <p className="text-slate-600 text-sm md:text-base leading-relaxed whitespace-pre-line font-medium">
-            {vehiculo.descripcion}
-          </p>
+          <MarkdownRenderer content={vehiculo.descripcion} className="text-slate-600 text-sm md:text-base font-medium" />
         </div>
       )}
     </div>

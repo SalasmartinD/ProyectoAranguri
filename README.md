@@ -14,16 +14,16 @@ En la realidad comercial de las concesionarias:
 *   El registro del flujo de caja (entradas por ventas, gastos operativos y sueldos) suele estar desconectado del control de stock físico.
 *   El dueño (Owner) necesita aplicar con flexibilidad ajustes extraordinarios sobre la liquidación de haberes a fin de mes (para descontar días de falta, registrar adelantos o inyectar bonos imprevistos).
 
-Por esta razón, diseñé una arquitectura que **cruza dinámicamente el control de stock con un módulo financiero real**. Cada venta no solo actualiza el estado del vehículo, sino que imputa comisiones al vendedor asignado y genera movimientos automáticos en el libro diario de caja, permitiendo luego liquidaciones de haberes flexibles y controladas en su totalidad desde el panel privado de administración.
+Por esta razón, diseñé una arquitectura que **cruza dinámicamente el control de stock con un módulo financiero real**. Cada venta no solo actualiza el estado del vehículo, sino que imputa comisiones al vendedor asignado y genera movimientos automáticos en el libro diario de caja, permitiendo liquidaciones de haberes flexibles y controladas en su totalidad desde el panel privado de administración.
 
 ---
 
 ## 2. Bitácora de Copiloto: Orquestación y Co-creación con IA
 
-Desarrollar una plataforma con este nivel de robustez en tiempos acotados requirió adoptar un rol de dirección técnica y orquestar el desarrollo de forma inteligente utilizando a **Antigravity (Claude)** como copiloto de desarrollo avanzado.
+Desarrollar una plataforma con este nivel de robustez en tiempos acotados requirió adoptar un rol de dirección técnica y orquestar el desarrollo de forma inteligente utilizando a **Antigravity** como copiloto de desarrollo avanzado.
 
 ### La IA como multiplicador de velocidad
-La clave para lograr un MVP de calidad de producción en tiempo récord fue delegar las tareas repetitivas a la IA. Usé al copiloto para generar el boilerplate inicial, redactar el borrador de las migraciones SQL de Supabase y estructurar la maquetación responsiva con las clases utilitarias de Tailwind CSS v4. 
+La clave para lograr un MVP de calidad de producción en tiempo récord fue delegar las tareas repetitivas a la IA. Usé a Antigravity para generar el boilerplate inicial, redactar el borrador de las migraciones SQL de Supabase y estructurar la maquetación responsiva con las clases utilitarias de Tailwind CSS v4. 
 Esto me liberó para concentrar el **80% del esfuerzo y tiempo humano en las decisiones críticas de ingeniería**:
 *   El diseño de la arquitectura de componentes y hooks en React.
 *   El tipado estricto con interfaces e inferencia de tipos de TypeScript.
@@ -127,10 +127,13 @@ Elegí **Vitest** por su velocidad extrema y compatibilidad nativa con Next.js y
 Cubrí con pruebas de robustez y mocks dos módulos críticos del negocio:
 
 1. Motor de Liquidación y Finanzas (`src/core/utils/finance.test.ts`):
-   - **Remuneración Fija**: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
-   - **Remuneración por Comisión**: Valida la aplicación estricta del porcentaje sobre el total de ventas.
-   - **Remuneración Mixta**: Comprueba el cálculo aditivo de básico + comisiones.
-   - **Resiliencia ante Límites**: Asegura que el sistema contenga de forma segura valores de ventas vacíos, en 0, negativos o de tipo `NaN`, retornando `$0` en comisiones en lugar de colapsar la transacción contable.
+   - **Cálculo de Sueldo Individual (`calcularSueldo`)**: Valida el cálculo de sueldo fijo sin ventas, comisiones puras, esquemas mixtos (básico + comisión) y el retorno seguro de 0 ante valores negativos o inválidos.
+   - **Cálculo de Liquidación (`calcularLiquidacion`)**:
+     - *Remuneración Fija*: Asegura que el empleado cobre únicamente su básico, sin comisiones de ventas ajenas.
+     - *Remuneración por Comisión*: Valida la aplicación estricta del porcentaje sobre el total de ventas.
+     - *Remuneración Mixta*: Comprueba el cálculo aditivo de básico + comisiones.
+     - *Resiliencia ante Límites*: Asegura que el sistema contenga de forma segura valores de ventas vacíos, en 0, negativos o de tipo `NaN`, retornando `$0` en comisiones en lugar de colapsar la transacción contable.
+   - **Formateo de Moneda (`formatCurrency`)**: Comprueba la conversión de números y strings numéricos a formato de moneda local (`$`), y el retorno seguro de `$0` ante valores nulos, indefinidos, vacíos o no numéricos.
 
 2. **Motor de Filtros del Catálogo** (`src/core/utils/filters.test.ts`):
    - **Parseo de Entrada**: Comprueba la conversión de strings a tipos numéricos para precios, kilómetros y años.
@@ -200,6 +203,13 @@ Diseñé un diagnóstico de infraestructura y determiné una falla concurrente p
 
 **Solución Implementada**: Re-arquitecturé el handler de sumisión inyectando una secuencia determinista: ejecuté una invalidación y refresco total de caché (`router.refresh()`) inmediatamente tras la promesa resuelta de Supabase Auth, forzando la destrucción del caché en memoria del navegador. En paralelo, optimicé el `middleware.ts` para mutar y propagar activamente las cookies validadas hacia los Server Components en el primer salto de red (`NextResponse.next({ request })`), erradicando por completo el comportamiento asíncrono errático.
 
+### 8.5. Visión de Producto y Próximos Pasos (Roadmap de Escalabilidad)
+El micro-ERP fue diseñado bajo una arquitectura modular y desacoplada, dejando la infraestructura de datos y la seguridad perimetral 100% preparadas para la implementación inmediata de las siguientes evoluciones del producto:
+
+*   **Sistema Autónomo de Gestión de Usuarios**: La base de datos ya cuenta con una tabla relacional de `roles` dinámica y un middleware RBAC perimetral funcional. El sistema está listo para incorporar una interfaz de administración que permita al Owner dar de alta nuevos usuarios del backend, asignarles roles específicos en caliente y restringir de forma automática el acceso a pestañas, vistas operativas o acciones de escritura según los claims de su JWT.
+*   **Auditoría y Traceabilidad Extendida**: Gracias a la estructura implementada en `sistema_logs` con soporte para payloads `JSONB`, la plataforma permite escalar hacia un módulo de auditoría forense en tiempo real, registrando de forma detallada qué usuario modificó cada registro de caja o inventario.
+*   **Automatización de Notificaciones (Webhooks)**: La lógica transaccional basada en triggers de PL/pgSQL permite acoplar de forma nativa canales de comunicación externos (confirmaciones de venta por WhatsApp/Email) disparando llamadas HTTP asíncronas directamente desde los eventos de la base de datos.
+
 ---
 
 ## 9. Guía de Instalación y Configuración Local
@@ -251,7 +261,7 @@ GEMINI_API_KEY=tu-api-key-de-gemini
 
 ### Paso 3: Inicialización de la Base de Datos (Supabase)
 
-Para garantizar un entorno seguro y con integridad referencial a prueba de fallos contables, diseñé un esquema de base de datos relacional y políticas de seguridad estrictas. La inicialización y estructuración de la base de datos se realiza aplicando secuencialmente los scripts de migración ubicados en el directorio `supabase/migrations/`.
+Para garantizar un entorno seguro y con integridad referencial a prueba de fallos contables, diseñé un esquema de base de datos relacional y políticas de seguridad estrictas. La inicialización y estructuración de la base de datos se realiza aplicando el script de migración único ubicado en el directorio `supabase/migrations/`.
 
 #### Diccionario de Esquema y Relaciones Críticas
 
